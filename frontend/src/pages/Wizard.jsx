@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { classesDB, origensDB, racasDB, semanasDB, diasDB, signosDB } from '../data/dharmaData';
 import { qualidadesDB, defeitosDB } from '../data/naturezasDB';
@@ -38,14 +38,9 @@ export default function Wizard() {
   if (characterData.birthDay === 'Segunda-feira') baseVantagens += 1;
   if (characterData.zodiacSign && characterData.zodiacSign.includes("Grifo")) baseVantagens += 2;
 
-  // Sexta-feira permite até 7 pontos de defeitos, os demais dias padrão 5
   const limiteDefeitos = characterData.birthDay === 'Sexta-feira' ? 7 : 5;
-  
   const rawPontosRecuperados = characterData.naturezas.filter(n => n.cost < 0).reduce((acc, curr) => acc + Math.abs(curr.cost), 0);
-  
-  // O benefício convertido segue o limite do dia (5 padrão ou 7 na sexta-feira)
   const pontosRecuperadosEfetivos = Math.min(rawPontosRecuperados, limiteDefeitos);
-  
   const pontosGastos = characterData.naturezas.filter(n => n.cost > 0).reduce((acc, curr) => acc + curr.cost, 0);
   
   const pontosDisponiveis = baseVantagens + pontosRecuperadosEfetivos - pontosGastos;
@@ -80,6 +75,51 @@ export default function Wizard() {
     });
   };
 
+  // ==========================================
+  // CÁLCULOS FINAIS PARA PRÉ-REQUISITOS
+  // ==========================================
+  const finalAttributes = useMemo(() => {
+    return {
+      corpo: characterData.baseAttributes.corpo + (selectedRace?.mods.corpo || 0) + (isFestivalBorn ? 0 : (selectedWeek?.mod.corpo || 0)),
+      movimento: characterData.baseAttributes.movimento + (selectedRace?.mods.movimento || 0) + (isFestivalBorn ? 0 : (selectedWeek?.mod.movimento || 0)),
+      mente: characterData.baseAttributes.mente + (selectedRace?.mods.mente || 0) + (isFestivalBorn ? 0 : (selectedWeek?.mod.mente || 0)),
+      espirito: characterData.baseAttributes.espirito + (selectedRace?.mods.espirito || 0) + (isFestivalBorn ? 0 : (selectedWeek?.mod.espirito || 0))
+    };
+  }, [characterData.baseAttributes, selectedRace, selectedWeek, isFestivalBorn]);
+
+  const checkClassPrereqs = (cls) => {
+    // CORREÇÃO AQUI: Retorna verdadeiro se a classe (cls) estiver undefined ou não tiver prereqs
+    if (!cls || !cls.prereqs) return true; 
+    
+    const { attributes: reqAttrs, orAttributes, techniques: reqTechs, natures: reqNatures } = cls.prereqs;
+
+    if (reqAttrs) {
+      for (const [attr, minVal] of Object.entries(reqAttrs)) {
+        if ((finalAttributes[attr.toLowerCase()] || 0) < minVal) return false;
+      }
+    }
+
+    if (orAttributes) {
+      const passedOr = orAttributes.some(cond => {
+        const [attr, minVal] = Object.entries(cond)[0];
+        return (finalAttributes[attr.toLowerCase()] || 0) >= minVal;
+      });
+      if (!passedOr) return false;
+    }
+
+    if (reqNatures) {
+      const hasNature = reqNatures.some(reqNat => characterData.naturezas.some(myNat => myNat.name.includes(reqNat)));
+      if (!hasNature) return false;
+    }
+
+    if (reqTechs) {
+      const hasAllTechs = reqTechs.every(reqTech => characterData.techniques.some(myTech => myTech.includes(reqTech)));
+      if (!hasAllTechs) return false;
+    }
+
+    return true;
+  };
+
   const saveCharacter = () => {
     const recursosBase = {
       conviccao: 1 + (selectedDay?.bonus === 'conviccao' ? 1 : 0) + (selectedRace?.name === 'Humano' ? 1 : 0) + (characterData.naturezas.some(n => n.id === 'convicto') ? 1 : 0),
@@ -87,25 +127,26 @@ export default function Wizard() {
       limiteDefeito: -limiteDefeitos,
       xpExtra: selectedDay?.bonus === 'xp' ? 15 : 0,
       vitalidadeExtra: selectedDay?.bonus === 'vitalidade' ? 3 : 0,
+      ouroExtra: selectedOrigin?.bonus?.ouro || 0
     };
 
     const finalCharacter = {
       ...characterData,
+      classes: characterData.class && characterData.class !== "Sem Classe" ? [characterData.class] : [],
       recursosBase,
-      finalAttributes: {
-        corpo: characterData.baseAttributes.corpo + (selectedRace?.mods.corpo || 0) + (isFestivalBorn ? 0 : (selectedWeek?.mod.corpo || 0)),
-        movimento: characterData.baseAttributes.movimento + (selectedRace?.mods.movimento || 0) + (isFestivalBorn ? 0 : (selectedWeek?.mod.movimento || 0)),
-        mente: characterData.baseAttributes.mente + (selectedRace?.mods.mente || 0) + (isFestivalBorn ? 0 : (selectedWeek?.mod.mente || 0)),
-        espirito: characterData.baseAttributes.espirito + (selectedRace?.mods.espirito || 0) + (isFestivalBorn ? 0 : (selectedWeek?.mod.espirito || 0)),
-      }
+      finalAttributes,
+      xpSpent: 0,
+      ouroSpent: 0,
+      items: [],
+      weapons: [],
+      armors: []
     };
 
     const existingCharacters = JSON.parse(localStorage.getItem('dharma_characters')) || [];
     localStorage.setItem('dharma_characters', JSON.stringify([...existingCharacters, finalCharacter]));
-    navigate('/'); 
+    navigate(`/character/${finalCharacter.id}`); 
   };
 
-  // Cálculos de Atributos (Passo 2)
   const totalSpent = Object.values(characterData.baseAttributes).reduce((a, b) => a + b, 0);
   const availablePoints = 40 - totalSpent;
   const minAttributeLimit = characterData.birthDay === 'Sábado' ? 7 : 8;
@@ -136,7 +177,7 @@ export default function Wizard() {
         
         {/* PASSO 1: Conceito */}
         {step === 1 && (
-          <div>
+          <div className="animate-fade-in">
             <h2 className="text-xl font-bold text-white mb-6">Conceito e Nascimento</h2>
             <div className="space-y-6">
               <div>
@@ -213,7 +254,7 @@ export default function Wizard() {
 
         {/* PASSO 2: Atributos */}
         {step === 2 && (
-          <div>
+          <div className="animate-fade-in">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-white">Distribuição de Atributos</h2>
               <span className={`px-3 py-1 rounded text-sm font-bold ${availablePoints === 0 ? 'bg-emerald-900 text-emerald-400' : 'bg-zinc-700 text-zinc-300'}`}>Pontos Livres: {availablePoints}</span>
@@ -242,15 +283,15 @@ export default function Wizard() {
 
         {/* PASSO 3: Origem e Classe */}
         {step === 3 && (
-          <div>
+          <div className="animate-fade-in">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-white">Origem e Classe</h2>
               <div className="flex gap-3 text-xs bg-zinc-900 p-2 rounded border border-zinc-700">
                 <span className="text-zinc-400">Finais:</span>
-                <span className="text-emerald-400 font-bold">C: {characterData.baseAttributes.corpo + (selectedRace?.mods.corpo || 0) + (isFestivalBorn ? 0 : (selectedWeek?.mod.corpo || 0))}</span>
-                <span className="text-emerald-400 font-bold">Mov: {characterData.baseAttributes.movimento + (selectedRace?.mods.movimento || 0) + (isFestivalBorn ? 0 : (selectedWeek?.mod.movimento || 0))}</span>
-                <span className="text-emerald-400 font-bold">Men: {characterData.baseAttributes.mente + (selectedRace?.mods.mente || 0) + (isFestivalBorn ? 0 : (selectedWeek?.mod.mente || 0))}</span>
-                <span className="text-emerald-400 font-bold">Esp: {characterData.baseAttributes.espirito + (selectedRace?.mods.espirito || 0) + (isFestivalBorn ? 0 : (selectedWeek?.mod.espirito || 0))}</span>
+                <span className="text-emerald-400 font-bold">C: {finalAttributes.corpo}</span>
+                <span className="text-emerald-400 font-bold">Mov: {finalAttributes.movimento}</span>
+                <span className="text-emerald-400 font-bold">Men: {finalAttributes.mente}</span>
+                <span className="text-emerald-400 font-bold">Esp: {finalAttributes.espirito}</span>
               </div>
             </div>
             
@@ -291,17 +332,28 @@ export default function Wizard() {
               </div>
 
               <div>
-                <label className="block text-zinc-300 mb-2">Classe Principal</label>
-                <select className="w-full bg-zinc-900 border border-zinc-700 rounded p-3 text-white focus:outline-none" value={characterData.class} onChange={(e) => setCharacterData({...characterData, class: e.target.value})}>
-                  <option value="" disabled>Selecione...</option>
-                  {classesDB.map((cls) => <option key={cls.name} value={cls.name}>{cls.name}</option>)}
-                </select>
-
-                {selectedClass && (
-                  <div className="mt-3 p-4 bg-zinc-950 border border-emerald-900 rounded shadow-inner">
-                    <span className="block font-bold text-emerald-400 mb-1">Pré-requisitos:</span>
-                    <span className="text-sm text-zinc-300">{selectedClass.reqs}</span>
-                  </div>
+                <label className="block text-zinc-300 mb-2">Classe Inicial</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto custom-scrollbar pr-2">
+                  {classesDB.map(cls => {
+                    const reqMet = checkClassPrereqs(cls);
+                    return (
+                      <button 
+                        key={cls.name} 
+                        disabled={!reqMet}
+                        onClick={() => setCharacterData({...characterData, class: cls.name})}
+                        className={`p-3 rounded border text-left transition-colors relative ${!reqMet ? 'bg-zinc-900 border-red-900/50 opacity-60 cursor-not-allowed' : characterData.class === cls.name ? 'bg-fuchsia-900/40 border-fuchsia-500' : 'bg-zinc-800 border-zinc-700 hover:border-zinc-500'}`}
+                      >
+                        <h3 className={`font-bold text-sm mb-1 ${!reqMet ? 'text-zinc-500' : characterData.class === cls.name ? 'text-fuchsia-400' : 'text-emerald-400'}`}>{cls.name}</h3>
+                        <div className={`text-[10px] font-bold p-1 rounded uppercase tracking-wider ${reqMet ? 'text-emerald-500' : 'text-red-400'}`}>
+                          {reqMet ? '✓ Requisitos Atendidos' : `🔒 Req: ${cls.reqs}`}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+                {/* Mostra um alerta apenas se a classe selecionada exige naturezas (já que a natureza só será preenchida no Passo 4) */}
+                {selectedClass && !checkClassPrereqs(selectedClass) && (
+                  <p className="text-xs text-amber-400 mt-2 italic">Atenção: A classe selecionada exige naturezas específicas. Você deverá adquiri-las no Passo 4 para concluir a ficha.</p>
                 )}
               </div>
             </div>
@@ -310,7 +362,7 @@ export default function Wizard() {
 
         {/* PASSO 4: Naturezas */}
         {step === 4 && (
-          <div>
+          <div className="animate-fade-in">
             <div className="flex justify-between items-start mb-6">
               <h2 className="text-xl font-bold text-white">Naturezas (Vantagens e Defeitos)</h2>
               <div className="text-right flex flex-col gap-1">
@@ -442,7 +494,7 @@ export default function Wizard() {
         ) : (
           <button 
             onClick={saveCharacter} 
-            disabled={!isNaturezasValid} 
+            disabled={!isNaturezasValid || !checkClassPrereqs(selectedClass)} 
             className="px-6 py-2 bg-emerald-500 text-zinc-950 rounded font-bold hover:bg-emerald-400 disabled:opacity-50 transition-colors shadow-[0_0_15px_rgba(16,185,129,0.3)]"
           >
             Finalizar Ficha
