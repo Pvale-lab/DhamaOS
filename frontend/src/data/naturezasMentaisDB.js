@@ -1,11 +1,12 @@
 // src/data/naturezasMentaisDB.js
 
 export const qualidadesMentaisDB = [
-  { 
+ { 
     id: "aprendizado_rapido", 
     name: "Aprendizado Rápido", 
     type: "variable", 
-    desc: "Reduz 10 da Mente base; o excedente vira economia tripla de XP em evoluções." 
+    costs: [3, 6, 9, 12, 15], 
+    desc: "Reduz todos os gastos futuros de XP em 1 para cada nível. Requer e é limitado por cada ponto de Mente acima de 10 na criação." 
   },
   { 
     id: "bom_senso", 

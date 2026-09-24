@@ -88,9 +88,7 @@ export default function Wizard() {
   }, [characterData.baseAttributes, selectedRace, selectedWeek, isFestivalBorn]);
 
   const checkClassPrereqs = (cls) => {
-    // CORREÇÃO AQUI: Retorna verdadeiro se a classe (cls) estiver undefined ou não tiver prereqs
     if (!cls || !cls.prereqs) return true; 
-    
     const { attributes: reqAttrs, orAttributes, techniques: reqTechs, natures: reqNatures } = cls.prereqs;
 
     if (reqAttrs) {
@@ -98,7 +96,6 @@ export default function Wizard() {
         if ((finalAttributes[attr.toLowerCase()] || 0) < minVal) return false;
       }
     }
-
     if (orAttributes) {
       const passedOr = orAttributes.some(cond => {
         const [attr, minVal] = Object.entries(cond)[0];
@@ -106,17 +103,14 @@ export default function Wizard() {
       });
       if (!passedOr) return false;
     }
-
     if (reqNatures) {
       const hasNature = reqNatures.some(reqNat => characterData.naturezas.some(myNat => myNat.name.includes(reqNat)));
       if (!hasNature) return false;
     }
-
     if (reqTechs) {
       const hasAllTechs = reqTechs.every(reqTech => characterData.techniques.some(myTech => myTech.includes(reqTech)));
       if (!hasAllTechs) return false;
     }
-
     return true;
   };
 
@@ -139,7 +133,8 @@ export default function Wizard() {
       ouroSpent: 0,
       items: [],
       weapons: [],
-      armors: []
+      armors: [],
+      pericias: []
     };
 
     const existingCharacters = JSON.parse(localStorage.getItem('dharma_characters')) || [];
@@ -351,9 +346,8 @@ export default function Wizard() {
                     )
                   })}
                 </div>
-                {/* Mostra um alerta apenas se a classe selecionada exige naturezas (já que a natureza só será preenchida no Passo 4) */}
                 {selectedClass && !checkClassPrereqs(selectedClass) && (
-                  <p className="text-xs text-amber-400 mt-2 italic">Atenção: A classe selecionada exige naturezas específicas. Você deverá adquiri-las no Passo 4 para concluir a ficha.</p>
+                  <p className="text-xs text-amber-400 mt-2 italic">Atenção: A classe selecionada exige naturezas específicas. Adquira-as no Passo 4 para concluir a ficha.</p>
                 )}
               </div>
             </div>
@@ -383,13 +377,31 @@ export default function Wizard() {
                 <div className="space-y-3 max-h-60 overflow-y-auto custom-scrollbar pr-2">
                   {qualidadesDB && qualidadesDB.map(q => {
                     const selectedNatureza = characterData.naturezas.find(n => n.id === q.id);
+                    
+                    // Lógica especial de bloqueio para o Aprendizado Rápido
+                    let availableCosts = q.costs;
+                    let isLocked = false;
+                    let lockMsg = "";
+
+                    if (q.id === "aprendizado_rapido" || q.name === "Aprendizado Rápido") {
+                      const maxLevelAllowed = Math.max(0, finalAttributes.mente - 10);
+                      if (maxLevelAllowed === 0) {
+                        isLocked = true;
+                        lockMsg = "Requer Mente 11+";
+                      } else {
+                        availableCosts = q.costs.filter(c => (c / 3) <= maxLevelAllowed);
+                      }
+                    }
+
                     return (
-                      <div key={q.id} className={`p-2 rounded text-sm border ${selectedNatureza ? 'border-emerald-600 bg-zinc-900' : 'border-zinc-800 hover:border-zinc-500'}`}>
+                      <div key={q.id} className={`p-2 rounded text-sm border ${selectedNatureza ? 'border-emerald-600 bg-zinc-900' : isLocked ? 'border-zinc-800 opacity-50' : 'border-zinc-800 hover:border-zinc-500'}`}>
                         <div className="flex justify-between items-center mb-1">
                           <span className="font-bold text-zinc-200">{q.name}</span>
                           <div className="flex gap-1">
-                            {q.type === 'variable' && q.costs ? (
-                              q.costs.map(c => {
+                            {isLocked ? (
+                              <span className="text-xs text-red-400 font-bold uppercase">{lockMsg}</span>
+                            ) : q.type === 'variable' && availableCosts ? (
+                              availableCosts.map(c => {
                                 const isThisCostSelected = selectedNatureza && selectedNatureza.cost === c;
                                 return (
                                   <button 

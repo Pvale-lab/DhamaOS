@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { racasDB, origensDB, diasDB, classesDB } from '../data/dharmaData';
 import { tecnicasPadraoDB, tecnicasClasseDB } from '../data/tecnicasDB';
 import { armasDB, armadurasDB } from '../data/equipamentosDB';
+import { escalasMagicas, magiasExemploDB } from '../data/magiasDB';
 
 // ==========================================
 // TABELAS DE SOBRECARGA E SLOTS
@@ -38,6 +39,19 @@ const reservatoriosDB = [
   { id: "mochila_multi", name: "Mochila multifuncional", price: 7, slotsBonus: 7, weight: 2 }
 ];
 
+const focosDB = [
+  { id: "cristal", name: "Cristal", price: 10, weight: 0.5, maxConv: 1 },
+  { id: "anel", name: "Anel", price: 20, weight: 0.25, maxConv: 1 },
+  { id: "amuleto", name: "Amuleto", price: 30, weight: 1, maxConv: 2 },
+  { id: "varinha", name: "Varinha", price: 40, weight: 0.5, maxConv: 2 },
+  { id: "totem", name: "Totem", price: 50, weight: 0.5, maxConv: 3 },
+  { id: "insignia", name: "Insígnia", price: 60, weight: 0, maxConv: 3 },
+  { id: "orbe", name: "Orbe", price: 70, weight: 1.5, maxConv: 4 },
+  { id: "relicario", name: "Relicário", price: 80, weight: 1, maxConv: 4 },
+  { id: "cajado", name: "Cajado", price: 90, weight: 2, maxConv: 5 },
+  { id: "cetro", name: "Cetro", price: 100, weight: 1.5, maxConv: 5 }
+];
+
 const getDiceForAttribute = (attrValue) => {
   const diceMap = {
     0: "1", 1: "1d2", 2: "1d4", 3: "1d6", 4: "1d8", 5: "1d10", 6: "1d12",
@@ -55,7 +69,6 @@ const rollDice = (diceString) => {
   const [countStr, facesStr] = diceString.split('d');
   const count = parseInt(countStr, 10);
   const faces = parseInt(facesStr, 10);
-  
   let total = 0;
   let rolls = [];
   for (let i = 0; i < count; i++) {
@@ -77,6 +90,7 @@ export default function CharacterSheet() {
   
   const [showEvolucao, setShowEvolucao] = useState(false);
   const [showMercador, setShowMercador] = useState(false);
+  const [showMagiaTab, setShowMagiaTab] = useState(false);
   const [lojaTab, setLojaTab] = useState('armas');
   
   const [diceSetup, setDiceSetup] = useState(null);
@@ -89,11 +103,10 @@ export default function CharacterSheet() {
       if (!found.weapons) found.weapons = [];
       if (!found.armors) found.armors = [];
       if (!found.pericias) found.pericias = [];
-      if (!found.classes && found.class) {
-        found.classes = found.class !== "Sem Classe" ? [found.class] : [];
-      } else if (!found.classes) {
-        found.classes = [];
-      }
+      if (!found.magias) found.magias = [];
+      if (!found.focos) found.focos = [];
+      if (!found.classes && found.class) found.classes = found.class !== "Sem Classe" ? [found.class] : [];
+      else if (!found.classes) found.classes = [];
     }
     return found || null;
   });
@@ -111,18 +124,70 @@ export default function CharacterSheet() {
   const selectedOrigin = origensDB.find(o => o.name === character.origin);
   const selectedDay = diasDB.find(d => d.name === character.birthDay);
   const myClasses = character.classes || [];
+  const myTechs = character.techniques || [];
 
   // ==========================================
-  // INVENTÁRIO, PESO E SLOTS
+  // CONDIÇÕES MÁGICAS E PARANORMAIS
+  // ==========================================
+  const isArcano = myTechs.includes('Erudição Mágica');
+  const isDivino = myTechs.includes('Espiritualidade');
+  const isInato = character.naturezas?.some(n => n.name.includes("Magia Inata"));
+  const canCastSpells = isArcano || isDivino || isInato;
+  const hasConjuracaoGuerra = myTechs.includes('Conjuração de Guerra');
+
+  if (myTechs.includes('Adivinhação')) {
+    const rituais = magiasExemploDB.filter(m => m.type.includes("Ritual") && m.type.includes("Adivinhação"));
+    rituais.forEach(rit => { if (!character.magias.includes(rit.name)) character.magias.push(rit.name); });
+  }
+  if (myTechs.includes('Encantamento')) {
+    const rituais = magiasExemploDB.filter(m => m.type.includes("Ritual") && m.type.includes("Encantamento"));
+    rituais.forEach(rit => { if (!character.magias.includes(rit.name)) character.magias.push(rit.name); });
+  }
+  if (myTechs.includes('Transmutação')) {
+    const rituais = magiasExemploDB.filter(m => m.type.includes("Ritual") && m.type.includes("Transmutação"));
+    rituais.forEach(rit => { if (!character.magias.includes(rit.name)) character.magias.push(rit.name); });
+  }
+  if (myTechs.includes('Conjuração')) {
+    const rituais = magiasExemploDB.filter(m => m.type.includes("Ritual") && m.type.includes("Conjuração"));
+    rituais.forEach(rit => { if (!character.magias.includes(rit.name)) character.magias.push(rit.name); });
+  }
+  if (myTechs.includes('Ilusão')) {
+    const rituais = magiasExemploDB.filter(m => m.type.includes("Ritual") && m.type.includes("Ilusão"));
+    rituais.forEach(rit => { if (!character.magias.includes(rit.name)) character.magias.push(rit.name); });
+  }
+  if (myTechs.includes('Abjuração')) {
+    const rituais = magiasExemploDB.filter(m => m.type.includes("Ritual") && m.type.includes("Abjuração"));
+    rituais.forEach(rit => { if (!character.magias.includes(rit.name)) character.magias.push(rit.name); });
+  }
+  if (myTechs.includes('Necromancia')) {
+    const rituais = magiasExemploDB.filter(m => m.type.includes("Ritual") && m.type.includes("Necromancia"));
+    rituais.forEach(rit => { if (!character.magias.includes(rit.name)) character.magias.push(rit.name); });
+  }
+  if (myTechs.includes('Magia Sacra')) {
+    const rituais = magiasExemploDB.filter(m => m.type.includes("Ritual") && m.type.includes("Magia Sacra"));
+    rituais.forEach(rit => { if (!character.magias.includes(rit.name)) character.magias.push(rit.name); });
+  }
+  if (myTechs.includes('Magia Natural')) {
+    const rituais = magiasExemploDB.filter(m => m.type.includes("Ritual") && m.type.includes("Magia Natural"));
+    rituais.forEach(rit => { if (!character.magias.includes(rit.name)) character.magias.push(rit.name); });
+  }
+  if (myTechs.includes('Magia Profana')) {
+    const rituais = magiasExemploDB.filter(m => m.type.includes("Ritual") && m.type.includes("Magia Profana"));
+    rituais.forEach(rit => { if (!character.magias.includes(rit.name)) character.magias.push(rit.name); });
+  }
+
+  // ==========================================
+  // INVENTÁRIO E SLOTS
   // ==========================================
   const normalizedItems = (character.items || []).map(it => typeof it === 'string' ? { name: it, weight: 0, slots: 1 } : it);
   
   const totalWeaponsWeight = (character.weapons || []).reduce((acc, w) => acc + (w.weight || 0), 0);
   const totalArmorsWeight = (character.armors || []).reduce((acc, a) => acc + (a.weight || 0), 0);
+  const totalFocosWeight = (character.focos || []).reduce((acc, f) => acc + (f.weight || 0), 0);
   const totalItemsWeight = normalizedItems.reduce((acc, i) => acc + (i.weight || 0), 0);
-  const totalWeight = parseFloat((totalWeaponsWeight + totalArmorsWeight + totalItemsWeight).toFixed(2));
   
-  // 1. CÁLCULO DE MAX SLOTS (Reservatórios)
+  const totalWeight = parseFloat((totalWeaponsWeight + totalArmorsWeight + totalFocosWeight + totalItemsWeight).toFixed(2));
+  
   let baseMaxSlots = 10;
   const raceNameLower = (character.race || "").toLowerCase();
   if (["gnomo", "halfling", "goblin"].some(r => raceNameLower.includes(r))) baseMaxSlots = 6;
@@ -135,27 +200,25 @@ export default function CharacterSheet() {
 
   const beltBonus = normalizedItems.some(i => i.name === "Algibeira/Cinto") ? 2 : 0;
   const pocketBonus = normalizedItems.some(i => i.name === "Roupa c/ bolsos") ? 1 : 0;
-
   const maxSlots = baseMaxSlots + bagBonus + beltBonus + pocketBonus;
 
-  // 2. CÁLCULO DE SLOTS USADOS
   const getWeaponSlots = (w) => {
     if (['Espada Curta', 'Sabre'].includes(w.name)) return 2;
     if (w.type.includes('Pesada')) return 3;
     if (w.type.includes('Versátil')) return 2;
-    return 1; // Leve
+    return 1;
   };
 
   const isReservoir = (name) => reservatoriosDB.some(r => r.name === name);
-
   const weaponSlots = (character.weapons || []).reduce((acc, w) => acc + getWeaponSlots(w), 0);
-  const armorSlots = (character.armors || []).reduce((acc, a) => acc + (a.defense || 0), 0); // Armadura gasta slots igual sua defesa base
-  const itemsSlots = normalizedItems.reduce((acc, i) => isReservoir(i.name) ? acc : acc + (i.slots !== undefined ? i.slots : 1), 0); // Reservatórios custam 0 slots p/ existir
-
-  const totalSlots = weaponSlots + armorSlots + itemsSlots;
+  const armorSlots = (character.armors || []).reduce((acc, a) => acc + (a.defense || 0), 0);
+  const focosSlots = (character.focos || []).reduce((acc, f) => acc + (f.weight === 0 ? 0 : (f.weight > 1 ? 2 : 1)), 0);
+  const itemsSlots = normalizedItems.reduce((acc, i) => isReservoir(i.name) ? acc : acc + (i.slots !== undefined ? i.slots : 1), 0);
+  
+  const totalSlots = weaponSlots + armorSlots + focosSlots + itemsSlots;
 
   // ==========================================
-  // CÁLCULOS GERAIS & RECURSOS
+  // CÁLCULOS GERAIS E ATRIBUTOS
   // ==========================================
   const baseCorpo = character.finalAttributes?.corpo || 10;
   const baseCorpoVal = Math.min(Math.max(baseCorpo, 1), 20);
@@ -165,15 +228,10 @@ export default function CharacterSheet() {
   let encumbranceLabel = "Carga Leve";
   let encumbranceColor = "text-emerald-400";
 
-  if (totalWeight > cargaLimits.leve && totalWeight <= cargaLimits.m2) {
-    encumbrancePenalty = 2; encumbranceLabel = "Carga Média"; encumbranceColor = "text-yellow-400";
-  } else if (totalWeight > cargaLimits.m2 && totalWeight <= cargaLimits.m4) {
-    encumbrancePenalty = 4; encumbranceLabel = "Carga Pesada"; encumbranceColor = "text-orange-400";
-  } else if (totalWeight > cargaLimits.m4 && totalWeight <= cargaLimits.m6) {
-    encumbrancePenalty = 6; encumbranceLabel = "Sobrecarga!"; encumbranceColor = "text-red-500";
-  } else if (totalWeight > cargaLimits.m6) {
-    encumbrancePenalty = 8; encumbranceLabel = "Imobilizado!"; encumbranceColor = "text-red-700 font-bold";
-  }
+  if (totalWeight > cargaLimits.leve && totalWeight <= cargaLimits.m2) { encumbrancePenalty = 2; encumbranceLabel = "Carga Média"; encumbranceColor = "text-yellow-400"; }
+  else if (totalWeight > cargaLimits.m2 && totalWeight <= cargaLimits.m4) { encumbrancePenalty = 4; encumbranceLabel = "Carga Pesada"; encumbranceColor = "text-orange-400"; }
+  else if (totalWeight > cargaLimits.m4 && totalWeight <= cargaLimits.m6) { encumbrancePenalty = 6; encumbranceLabel = "Sobrecarga!"; encumbranceColor = "text-red-500"; }
+  else if (totalWeight > cargaLimits.m6) { encumbrancePenalty = 8; encumbranceLabel = "Imobilizado!"; encumbranceColor = "text-red-700 font-bold"; }
 
   let baseMovimento = (character.finalAttributes?.movimento || 10) - encumbrancePenalty;
   baseMovimento = Math.max(0, baseMovimento);
@@ -230,24 +288,75 @@ export default function CharacterSheet() {
   const conviccao = character.recursosBase?.conviccao || 1;
 
   // ==========================================
+  // PENALIDADES DE CONJURAÇÃO (Regras Novas)
+  // ==========================================
+  const hasShield = character.armors?.some(a => a.type.toLowerCase().includes('escudo'));
+  let castPenaltyCount = 0;
+  let castImpossible = false;
+  let castReasons = [];
+
+  if (hasShield && !hasConjuracaoGuerra) {
+    castPenaltyCount++;
+    castReasons.push("Escudo empunhado");
+  }
+
+  const leveLimite = cargaLimits.leve;
+  let effectiveArmorWeight = totalArmorsWeight;
+  if (hasConjuracaoGuerra) effectiveArmorWeight /= 2; // Suporta armaduras mais pesadas
+
+  if (effectiveArmorWeight > leveLimite / 2) {
+    castImpossible = true;
+    castReasons.push("Armadura muito pesada (> 1/2 Carga Leve)");
+  } else if (effectiveArmorWeight > leveLimite / 3) {
+    castPenaltyCount++;
+    castReasons.push("Armadura restritiva (> 1/3 Carga Leve)");
+  }
+
+  if (totalWeight > leveLimite * 2) {
+    castImpossible = true;
+    castReasons.push("Carga excedeu o dobro da Carga Leve");
+  } else if (totalWeight > leveLimite) {
+    castPenaltyCount++;
+    castReasons.push("Sobrecarga física (> Carga Leve)");
+  }
+
+  if (castPenaltyCount >= 2) {
+    castImpossible = true;
+    castReasons.push("Múltiplas penalidades combinadas");
+  }
+
+  let castStatusText = "Normal";
+  let castStatusColor = "text-emerald-400";
+  if (castImpossible) {
+    castStatusText = "Impossível Conjurar";
+    castStatusColor = "text-red-500 font-bold";
+  } else if (castPenaltyCount === 1) {
+    castStatusText = "Conjuração com Penalidade";
+    castStatusColor = "text-yellow-400 font-bold";
+  }
+
+  // ==========================================
   // ECONOMIA: XP E OURO
   // ==========================================
   const xpTotal = 50 + (selectedOrigin?.bonus?.xp || 0) + (character.recursosBase?.xpExtra || 0);
   const xpSpent = character.xpSpent || 0;
   const availableXP = xpTotal - xpSpent;
 
+  const aprendizadoRapidoNat = character.naturezas?.find(n => n.id === 'aprendizado_rapido' || n.name?.toLowerCase().includes('aprendizado rápido'));
+  const xpDiscount = aprendizadoRapidoNat ? Math.floor(aprendizadoRapidoNat.cost / 3) : 0;
+  const getDiscountedXP = (baseCost) => baseCost > 0 ? Math.max(0, baseCost - xpDiscount) : 0;
+
   const ouroTotal = (selectedOrigin?.bonus?.ouro || 0) + (character.recursosBase?.ouroExtra || 0);
   const ouroSpent = character.ouroSpent || 0;
   const availableOuro = parseFloat((ouroTotal - ouroSpent).toFixed(2));
 
   const myClassTechs = tecnicasClasseDB.filter(t => myClasses.includes(t.classReq));
-  const myTechs = character.techniques || [];
 
   const getNextClassCost = () => {
     if (myClasses.length === 0) return 0;
     return 50 * Math.pow(2, myClasses.length - 1);
   };
-  const nextClassCost = getNextClassCost();
+  const nextClassCost = getNextClassCost() === 0 ? 0 : getDiscountedXP(getNextClassCost());
 
   const checkClassPrereqs = (cls) => {
     if (!cls || !cls.prereqs) return true; 
@@ -284,11 +393,11 @@ export default function CharacterSheet() {
   };
 
   // ==========================================
-  // FUNÇÕES DE COMPRA (XP)
+  // FUNÇÕES DE INTERAÇÃO
   // ==========================================
   const handleBuyAttribute = (attrKey) => {
     const currentBase = character.attributes?.[attrKey] || character.finalAttributes?.[attrKey] || 0;
-    const cost = currentBase * 5;
+    const cost = getDiscountedXP(currentBase * 5);
     if (availableXP >= cost) {
       const updatedChar = { ...character };
       if (!updatedChar.attributes) updatedChar.attributes = {};
@@ -301,7 +410,7 @@ export default function CharacterSheet() {
   };
 
   const handleBuyVitality = () => {
-    const cost = baseVitalidade;
+    const cost = getDiscountedXP(baseVitalidade);
     if (availableXP >= cost) {
       const updatedChar = { ...character };
       if (!updatedChar.recursosBase) updatedChar.recursosBase = {};
@@ -312,12 +421,13 @@ export default function CharacterSheet() {
   };
 
   const handleBuyTechnique = (tech) => {
-    if (availableXP >= tech.cost) {
+    const cost = getDiscountedXP(tech.cost);
+    if (availableXP >= cost) {
       const updatedChar = { ...character };
       if (!updatedChar.techniques) updatedChar.techniques = [];
       if (!updatedChar.techniques.includes(tech.name)) {
         updatedChar.techniques.push(tech.name);
-        updatedChar.xpSpent = (updatedChar.xpSpent || 0) + tech.cost;
+        updatedChar.xpSpent = (updatedChar.xpSpent || 0) + cost;
         setCharacter(updatedChar); updateLocalStorage(updatedChar);
       }
     }
@@ -335,7 +445,7 @@ export default function CharacterSheet() {
   const handleAddPericia = (e) => {
     e.preventDefault();
     if (!newPericia.trim()) return;
-    const cost = 20; 
+    const cost = getDiscountedXP(20); 
     if (availableXP >= cost) {
       const updatedChar = { ...character };
       if (!updatedChar.pericias) updatedChar.pericias = [];
@@ -351,7 +461,7 @@ export default function CharacterSheet() {
   const handleUpgradePericia = (index) => {
     const pericia = character.pericias[index];
     if (pericia.level >= 5) return;
-    const cost = (pericia.level + 1) * 20; 
+    const cost = getDiscountedXP((pericia.level + 1) * 20); 
     if (availableXP >= cost) {
       const updatedChar = { ...character };
       updatedChar.pericias[index].level += 1;
@@ -360,9 +470,17 @@ export default function CharacterSheet() {
     }
   };
 
-  // ==========================================
-  // FUNÇÕES DO MERCADOR E INVENTÁRIO (OURO)
-  // ==========================================
+  const handleBuyMagia = (magia) => {
+    const cost = getDiscountedXP(magia.cost);
+    if (availableXP >= cost) {
+      const updatedChar = { ...character };
+      if (!updatedChar.magias) updatedChar.magias = [];
+      updatedChar.magias.push(magia.name);
+      updatedChar.xpSpent = (updatedChar.xpSpent || 0) + cost;
+      setCharacter(updatedChar); updateLocalStorage(updatedChar);
+    }
+  };
+
   const handleBuyWeapon = (weapon) => {
     if (availableOuro >= weapon.price) {
       const updatedChar = { ...character };
@@ -398,10 +516,34 @@ export default function CharacterSheet() {
       const updatedChar = { ...character };
       if (!updatedChar.items) updatedChar.items = [];
       if (updatedChar.items.some(i => i.name === res.name)) return alert("Você já possui este reservatório.");
-      
-      // Reservatórios são salvos como itens comuns, mas não ocupam slots na matemática visual da ficha
       updatedChar.items.push({ name: res.name, weight: res.weight, slots: 0 });
       updatedChar.ouroSpent = (updatedChar.ouroSpent || 0) + res.price;
+      setCharacter(updatedChar); updateLocalStorage(updatedChar);
+    }
+  };
+
+  const handleBuyFoco = (foco) => {
+    if (availableOuro >= foco.price) {
+      const updatedChar = { ...character };
+      if (!updatedChar.focos) updatedChar.focos = [];
+      updatedChar.focos.push({ ...foco, storedConv: 0 });
+      updatedChar.ouroSpent = (updatedChar.ouroSpent || 0) + foco.price;
+      setCharacter(updatedChar); updateLocalStorage(updatedChar);
+    }
+  };
+  const handleSellFoco = (index, price) => {
+    const updatedChar = { ...character };
+    updatedChar.focos = updatedChar.focos.filter((_, i) => i !== index);
+    updatedChar.ouroSpent = (updatedChar.ouroSpent || 0) - price;
+    setCharacter(updatedChar); updateLocalStorage(updatedChar);
+  };
+
+  const handleAdjustFoco = (index, delta) => {
+    const updatedChar = { ...character };
+    const foco = updatedChar.focos[index];
+    const novoValor = foco.storedConv + delta;
+    if (novoValor >= 0 && novoValor <= foco.maxConv) {
+      foco.storedConv = novoValor;
       setCharacter(updatedChar); updateLocalStorage(updatedChar);
     }
   };
@@ -410,14 +552,13 @@ export default function CharacterSheet() {
     e.preventDefault();
     if (!newItemName.trim()) return;
     const weightNum = parseFloat(newItemWeight) || 0;
-    const slotsNum = parseInt(newItemSlots) || 1;
-    
+    const slotsNum = parseInt(newItemSlots) || 0;
     const updatedItems = [...normalizedItems, { name: newItemName.trim(), weight: weightNum, slots: slotsNum }];
     const updatedChar = { ...character, items: updatedItems };
     setCharacter(updatedChar); updateLocalStorage(updatedChar);
     setNewItemName('');
     setNewItemWeight('');
-    setNewItemSlots(1);
+    setNewItemSlots(0);
   };
   
   const handleRemoveItem = (index) => {
@@ -426,23 +567,47 @@ export default function CharacterSheet() {
     setCharacter(updatedChar); updateLocalStorage(updatedChar);
   };
 
+  const executeRoll = () => {
+    const finalAttr = diceSetup.baseVal + diceSetup.periciaLevel;
+    const diceStr = getDiceForAttribute(finalAttr);
+    let resultObj, discardedObj = null;
+
+    if (diceSetup.modifier === 'bonus') {
+      const roll1 = rollDice(diceStr);
+      const roll2 = rollDice(diceStr);
+      if (roll1.total >= roll2.total) { resultObj = roll1; discardedObj = roll2; }
+      else { resultObj = roll2; discardedObj = roll1; }
+    } else if (diceSetup.modifier === 'penalty') {
+      const roll1 = rollDice(diceStr);
+      const roll2 = rollDice(diceStr);
+      if (roll1.total <= roll2.total) { resultObj = roll1; discardedObj = roll2; }
+      else { resultObj = roll2; discardedObj = roll1; }
+    } else {
+      resultObj = rollDice(diceStr);
+    }
+
+    setDiceSetup({ ...diceSetup, result: resultObj, discardedResult: discardedObj, finalDiceStr: diceStr });
+  };
+
   return (
     <div className="p-8 max-w-5xl mx-auto text-zinc-100">
       
-      {/* MODAL DE ROLAGEM DE DADOS INTELIGENTE */}
+      {/* MODAL DE ROLAGEM DE DADOS */}
       {diceSetup && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 animate-fade-in" onClick={() => setDiceSetup(null)}>
           <div className="bg-zinc-800 p-8 rounded-lg border-2 border-fuchsia-500 shadow-2xl shadow-fuchsia-900/50 text-center max-w-sm w-full relative" onClick={e => e.stopPropagation()}>
             {!diceSetup.result ? (
               <>
                 <h3 className="text-2xl font-bold text-fuchsia-400 mb-4 capitalize">Teste de {diceSetup.attr}</h3>
-                <div className="mb-6 bg-zinc-900 p-4 rounded border border-zinc-700">
+                <div className="mb-4 bg-zinc-900 p-4 rounded border border-zinc-700">
                   <p className="text-zinc-400 text-sm mb-1">Valor Base: <span className="font-bold text-white">{diceSetup.baseVal} ({getDiceForAttribute(diceSetup.baseVal)})</span></p>
+                  
                   <label className="block text-xs font-bold text-fuchsia-400 mt-5 mb-2 uppercase tracking-wider">Aplicar Perícia?</label>
                   <select className="w-full bg-zinc-800 border border-fuchsia-900/50 rounded p-2 text-white text-sm focus:border-fuchsia-500 outline-none" value={diceSetup.periciaLevel} onChange={(e) => setDiceSetup({...diceSetup, periciaLevel: Number(e.target.value)})}>
                     <option value={0}>Nenhuma Perícia</option>
                     {character.pericias?.map((p, i) => <option key={i} value={p.level}>{p.name} (Nível {p.level})</option>)}
                   </select>
+                  
                   {diceSetup.periciaLevel > 0 && (
                      <div className="mt-4 p-2 bg-fuchsia-950/30 border border-fuchsia-900/50 rounded">
                        <p className="text-zinc-300 text-xs mb-1">Atributo Efetivo: <span className="font-bold text-white">{diceSetup.baseVal + diceSetup.periciaLevel}</span></p>
@@ -450,22 +615,38 @@ export default function CharacterSheet() {
                      </div>
                   )}
                 </div>
-                <button onClick={() => {
-                     const finalAttr = diceSetup.baseVal + diceSetup.periciaLevel;
-                     const diceStr = getDiceForAttribute(finalAttr);
-                     setDiceSetup({...diceSetup, result: rollDice(diceStr), finalDiceStr: diceStr});
-                  }} className="px-6 py-3 bg-fuchsia-600 hover:bg-fuchsia-500 text-white rounded font-bold w-full transition-colors flex items-center justify-center gap-2 text-lg">
+
+                <div className="mb-4">
+                  <span className="block text-xs font-bold text-zinc-400 mb-2 uppercase tracking-wider">Modificador</span>
+                  <div className="flex justify-center gap-2">
+                    <button onClick={() => setDiceSetup({...diceSetup, modifier: 'penalty'})} className={`flex-1 py-2 rounded text-xs font-bold transition-colors ${diceSetup.modifier === 'penalty' ? 'bg-red-600 text-white shadow-lg shadow-red-900/50' : 'bg-zinc-700 text-zinc-400 hover:bg-zinc-600'}`}>Penalidade</button>
+                    <button onClick={() => setDiceSetup({...diceSetup, modifier: 'normal'})} className={`flex-1 py-2 rounded text-xs font-bold transition-colors ${diceSetup.modifier === 'normal' ? 'bg-zinc-500 text-white shadow-lg' : 'bg-zinc-700 text-zinc-400 hover:bg-zinc-600'}`}>Normal</button>
+                    <button onClick={() => setDiceSetup({...diceSetup, modifier: 'bonus'})} className={`flex-1 py-2 rounded text-xs font-bold transition-colors ${diceSetup.modifier === 'bonus' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/50' : 'bg-zinc-700 text-zinc-400 hover:bg-zinc-600'}`}>Bônus</button>
+                  </div>
+                </div>
+
+                <button onClick={executeRoll} className="px-6 py-3 bg-fuchsia-600 hover:bg-fuchsia-500 text-white rounded font-bold w-full transition-colors flex items-center justify-center gap-2 text-lg">
                   <span>🎲</span> Rolar Dados
                 </button>
               </>
             ) : (
               <>
                  <h3 className="text-2xl font-bold text-fuchsia-400 mb-1 capitalize">Resultado: {diceSetup.attr}</h3>
-                 <p className="text-zinc-400 text-sm mb-6">Rolagem de <span className="font-bold text-white">{diceSetup.finalDiceStr}</span></p>
+                 <p className="text-zinc-400 text-sm mb-4">Rolagem de <span className="font-bold text-white">{diceSetup.finalDiceStr}</span> {diceSetup.modifier === 'bonus' ? <span className="text-emerald-400">(Com Bônus)</span> : diceSetup.modifier === 'penalty' ? <span className="text-red-400">(Com Penalidade)</span> : ''}</p>
+                 
                  <div className="text-6xl font-bold text-white mb-6 animate-pop-in">{diceSetup.result.total}</div>
-                 <div className="flex justify-center gap-3 mb-8 flex-wrap">
-                   {diceSetup.result.rolls.map((r, i) => <div key={i} className="bg-zinc-900 border border-zinc-600 w-12 h-12 flex items-center justify-center rounded shadow-inner text-emerald-400 font-bold text-lg">{r}</div>)}
+                 <div className="flex justify-center gap-2 mb-6 flex-wrap">
+                   {diceSetup.result.rolls.map((r, i) => <div key={i} className="bg-zinc-900 border border-zinc-600 w-10 h-10 flex items-center justify-center rounded shadow-inner text-emerald-400 font-bold text-sm">{r}</div>)}
                  </div>
+
+                 {diceSetup.discardedResult && (
+                   <div className="mb-6 p-3 bg-zinc-900 rounded border border-zinc-700 opacity-60">
+                     <p className="text-xs text-zinc-400 mb-2">Rolagem Descartada ({diceSetup.modifier === 'bonus' ? 'Menor' : 'Maior'}): <span className="font-bold text-zinc-300">{diceSetup.discardedResult.total}</span></p>
+                     <div className="flex justify-center gap-1.5 flex-wrap">
+                       {diceSetup.discardedResult.rolls.map((r, i) => <div key={`d-${i}`} className="bg-zinc-800 text-zinc-500 w-6 h-6 flex items-center justify-center rounded text-[10px]">{r}</div>)}
+                     </div>
+                   </div>
+                 )}
                  <button onClick={() => setDiceSetup(null)} className="px-6 py-3 bg-zinc-700 hover:bg-zinc-600 text-white rounded font-bold w-full transition-colors">Fechar</button>
               </>
             )}
@@ -487,19 +668,352 @@ export default function CharacterSheet() {
         </div>
       </div>
 
+      {/* ABA DE MAGIAS (EXPANSÍVEL) */}
+      {showMagiaTab && (
+        <div className="mb-8 bg-zinc-900 p-6 rounded-lg border-2 border-fuchsia-800 shadow-lg shadow-fuchsia-900/20 animate-fade-in">
+           <div className="flex justify-between items-center mb-6 border-b border-fuchsia-900/50 pb-3">
+             <h2 className="text-2xl font-bold text-fuchsia-400">Grimório & Aspectos Mágicos</h2>
+             <span className="text-xs font-bold text-fuchsia-300 uppercase">Tabela de Limites do Sistema</span>
+           </div>
+
+           <div className="overflow-x-auto custom-scrollbar pb-2">
+             <table className="w-full text-left text-[11px] text-zinc-300 border-collapse">
+               <thead>
+                 <tr className="bg-fuchsia-950/50 text-fuchsia-300 uppercase tracking-wider border-b border-fuchsia-900">
+                   <th className="p-2">Grau</th>
+                   <th className="p-2">Dif</th>
+                   <th className="p-2">Execução</th>
+                   <th className="p-2">Alcance (Menor/Maior)</th>
+                   <th className="p-2">Dano (Direto/Evid)</th>
+                   <th className="p-2">Cura Básica</th>
+                   <th className="p-2">Tempo Mínimo</th>
+                 </tr>
+               </thead>
+               <tbody>
+                 {escalasMagicas.map((esc, i) => (
+                   <tr key={i} className="border-b border-zinc-800 hover:bg-zinc-800/50 transition-colors">
+                     <td className="p-2 font-bold text-white text-xs">{esc.grau}</td>
+                     <td className="p-2 text-fuchsia-400 font-bold">{esc.dif}</td>
+                     <td className="p-2">{esc.execucao}</td>
+                     <td className="p-2">{esc.alcanceMenor} / {esc.alcanceMaior}</td>
+                     <td className="p-2">{esc.danoDireto} / {esc.danoEvidente}</td>
+                     <td className="p-2 text-emerald-400">{esc.cura}</td>
+                     <td className="p-2">{esc.tempoMenor}</td>
+                   </tr>
+                 ))}
+               </tbody>
+             </table>
+           </div>
+           
+           <div className="mt-6 p-4 bg-fuchsia-950/20 border border-fuchsia-900/40 rounded">
+             <p className="text-xs text-zinc-400 leading-relaxed">
+                <span className="font-bold text-fuchsia-300">Como funciona:</span> O Grau da magia determina a sua Dificuldade (Dif). Para acessar aspectos mais altos (Grau I, II, III...), você precisa investir <span className="font-bold text-white">Perícia</span> na respectiva Escola Mágica ou Doutrina. Cada ponto de Perícia eleva o Grau máximo e soma +1 no Atributo base de conjuração.
+             </p>
+           </div>
+
+           {/* Área de Compra de Magias e Escolas */}
+           <div className="mt-8 border-t border-fuchsia-900/50 pt-6">
+             <h3 className="text-lg font-bold text-zinc-200 mb-4">Adquirir Novas Magias</h3>
+             
+             <div className="flex flex-col gap-3 mb-6">
+               {!myTechs.includes('Adivinhação') && (
+                 <div className="p-4 bg-orange-950/20 border border-orange-900/50 rounded flex justify-between items-center">
+                   <div>
+                     <h4 className="font-bold text-orange-400">Escola Arcana: Adivinhação (20 XP)</h4>
+                     <p className="text-xs text-zinc-400">Desbloqueia os Rituais gratuitos de Adivinhação e libera a compra de Magias Específicas da escola.</p>
+                   </div>
+                   <button onClick={() => handleBuyTechnique({name: "Adivinhação", cost: 20})} disabled={availableXP < getDiscountedXP(20)} className={`shrink-0 px-4 py-2 rounded text-xs font-bold transition-colors ${availableXP >= getDiscountedXP(20) ? 'bg-orange-700 hover:bg-orange-600 text-white' : 'bg-zinc-700 text-zinc-500 cursor-not-allowed'}`}>
+                     Desbloquear Escola ({getDiscountedXP(20)} XP)
+                   </button>
+                 </div>
+               )}
+               
+               {!myTechs.includes('Encantamento') && (
+                 <div className="p-4 bg-rose-950/20 border border-rose-900/50 rounded flex justify-between items-center">
+                   <div>
+                     <h4 className="font-bold text-rose-400">Escola Arcana: Encantamento (20 XP)</h4>
+                     <p className="text-xs text-zinc-400">Desbloqueia Rituais e magias focadas em Controle Mental, Emoções, Medo e Manipulação.</p>
+                   </div>
+                   <button onClick={() => handleBuyTechnique({name: "Encantamento", cost: 20})} disabled={availableXP < getDiscountedXP(20)} className={`shrink-0 px-4 py-2 rounded text-xs font-bold transition-colors ${availableXP >= getDiscountedXP(20) ? 'bg-rose-700 hover:bg-rose-600 text-white' : 'bg-zinc-700 text-zinc-500 cursor-not-allowed'}`}>
+                     Desbloquear Escola ({getDiscountedXP(20)} XP)
+                   </button>
+                 </div>
+               )}
+
+               {!myTechs.includes('Transmutação') && (
+                 <div className="p-4 bg-emerald-950/20 border border-emerald-900/50 rounded flex justify-between items-center">
+                   <div>
+                     <h4 className="font-bold text-emerald-400">Escola Arcana: Transmutação (20 XP)</h4>
+                     <p className="text-xs text-zinc-400">Desbloqueia os Rituais gratuitos da pedra filosofal e libera compra de Transformação/Alteração da matéria.</p>
+                   </div>
+                   <button onClick={() => handleBuyTechnique({name: "Transmutação", cost: 20})} disabled={availableXP < getDiscountedXP(20)} className={`shrink-0 px-4 py-2 rounded text-xs font-bold transition-colors ${availableXP >= getDiscountedXP(20) ? 'bg-emerald-700 hover:bg-emerald-600 text-white' : 'bg-zinc-700 text-zinc-500 cursor-not-allowed'}`}>
+                     Desbloquear Escola ({getDiscountedXP(20)} XP)
+                   </button>
+                 </div>
+               )}
+
+               {!myTechs.includes('Conjuração') && (
+                 <div className="p-4 bg-violet-950/20 border border-violet-900/50 rounded flex justify-between items-center">
+                   <div>
+                     <h4 className="font-bold text-violet-400">Escola Arcana: Conjuração (20 XP)</h4>
+                     <p className="text-xs text-zinc-400">Desbloqueia os Rituais gratuitos de Portal e Desejo, e libera compra de Teleporte/Invocação de seres e armas.</p>
+                   </div>
+                   <button onClick={() => handleBuyTechnique({name: "Conjuração", cost: 20})} disabled={availableXP < getDiscountedXP(20)} className={`shrink-0 px-4 py-2 rounded text-xs font-bold transition-colors ${availableXP >= getDiscountedXP(20) ? 'bg-violet-700 hover:bg-violet-600 text-white' : 'bg-zinc-700 text-zinc-500 cursor-not-allowed'}`}>
+                     Desbloquear Escola ({getDiscountedXP(20)} XP)
+                   </button>
+                 </div>
+               )}
+
+               {!myTechs.includes('Evocação') && (
+                 <div className="p-4 bg-red-950/20 border border-red-900/50 rounded flex justify-between items-center">
+                   <div>
+                     <h4 className="font-bold text-red-400">Escola Arcana: Evocação (20 XP)</h4>
+                     <p className="text-xs text-zinc-400">Escola bruta focada em conjurar energias destrutivas elementais (Fogo, Raio, Gelo, Vibração) para dano massivo.</p>
+                   </div>
+                   <button onClick={() => handleBuyTechnique({name: "Evocação", cost: 20})} disabled={availableXP < getDiscountedXP(20)} className={`shrink-0 px-4 py-2 rounded text-xs font-bold transition-colors ${availableXP >= getDiscountedXP(20) ? 'bg-red-700 hover:bg-red-600 text-white' : 'bg-zinc-700 text-zinc-500 cursor-not-allowed'}`}>
+                     Desbloquear Escola ({getDiscountedXP(20)} XP)
+                   </button>
+                 </div>
+               )}
+
+               {!myTechs.includes('Ilusão') && (
+                 <div className="p-4 bg-indigo-950/20 border border-indigo-900/50 rounded flex justify-between items-center">
+                   <div>
+                     <h4 className="font-bold text-indigo-400">Escola Arcana: Ilusão (20 XP)</h4>
+                     <p className="text-xs text-zinc-400">Desbloqueia os Rituais gratuitos de Silêncio e Escrita Falsa, e libera compra de Invisibilidade, Miragem e Hipnose.</p>
+                   </div>
+                   <button onClick={() => handleBuyTechnique({name: "Ilusão", cost: 20})} disabled={availableXP < getDiscountedXP(20)} className={`shrink-0 px-4 py-2 rounded text-xs font-bold transition-colors ${availableXP >= getDiscountedXP(20) ? 'bg-indigo-700 hover:bg-indigo-600 text-white' : 'bg-zinc-700 text-zinc-500 cursor-not-allowed'}`}>
+                     Desbloquear Escola ({getDiscountedXP(20)} XP)
+                   </button>
+                 </div>
+               )}
+
+               {!myTechs.includes('Abjuração') && (
+                 <div className="p-4 bg-teal-950/20 border border-teal-900/50 rounded flex justify-between items-center">
+                   <div>
+                     <h4 className="font-bold text-teal-400">Escola Arcana: Abjuração (20 XP)</h4>
+                     <p className="text-xs text-zinc-400">A Suprema Escola da Negação. Libera Contramágica, Campo Antimagia e Escudos Protetores contra danos mágicos e físicos.</p>
+                   </div>
+                   <button onClick={() => handleBuyTechnique({name: "Abjuração", cost: 20})} disabled={availableXP < getDiscountedXP(20)} className={`shrink-0 px-4 py-2 rounded text-xs font-bold transition-colors ${availableXP >= getDiscountedXP(20) ? 'bg-teal-700 hover:bg-teal-600 text-white' : 'bg-zinc-700 text-zinc-500 cursor-not-allowed'}`}>
+                     Desbloquear Escola ({getDiscountedXP(20)} XP)
+                   </button>
+                 </div>
+               )}
+
+               {!myTechs.includes('Necromancia') && (
+                 <div className="p-4 bg-zinc-950/40 border border-zinc-500/50 rounded flex justify-between items-center">
+                   <div>
+                     <h4 className="font-bold text-zinc-300">Escola Arcana: Necromancia (20 XP)</h4>
+                     <p className="text-xs text-zinc-500">Manipula energia da vida e morte. Drena Vida, Levanta Zumbis, amaldiçoa com doenças e libera Rituais como o de Filactéria (Lich).</p>
+                   </div>
+                   <button onClick={() => handleBuyTechnique({name: "Necromancia", cost: 20})} disabled={availableXP < getDiscountedXP(20)} className={`shrink-0 px-4 py-2 rounded text-xs font-bold transition-colors ${availableXP >= getDiscountedXP(20) ? 'bg-zinc-700 hover:bg-zinc-600 text-white' : 'bg-zinc-900 text-zinc-600 cursor-not-allowed'}`}>
+                     Desbloquear Escola ({getDiscountedXP(20)} XP)
+                   </button>
+                 </div>
+               )}
+
+               {!myTechs.includes('Magia Sacra') && (
+                 <div className="p-4 bg-yellow-950/20 border border-yellow-900/50 rounded flex justify-between items-center mt-2">
+                   <div>
+                     <h4 className="font-bold text-yellow-400">Doutrina Espiritual: Magia Sacra (20 XP)</h4>
+                     <p className="text-xs text-zinc-400">Poder canalizado dos deuses bons (Usa o atributo Espírito). Especializada em Curas, Exorcismos, Proteção Divina e Milagres como a Ressurreição.</p>
+                   </div>
+                   <button onClick={() => handleBuyTechnique({name: "Magia Sacra", cost: 20})} disabled={availableXP < getDiscountedXP(20)} className={`shrink-0 px-4 py-2 rounded text-xs font-bold transition-colors ${availableXP >= getDiscountedXP(20) ? 'bg-yellow-700 hover:bg-yellow-600 text-white shadow-lg shadow-yellow-900/50' : 'bg-zinc-700 text-zinc-500 cursor-not-allowed'}`}>
+                     Desbloquear Doutrina ({getDiscountedXP(20)} XP)
+                   </button>
+                 </div>
+               )}
+
+               {!myTechs.includes('Magia Natural') && (
+                 <div className="p-4 bg-lime-950/20 border border-lime-900/50 rounded flex justify-between items-center mt-2">
+                   <div>
+                     <h4 className="font-bold text-lime-400">Doutrina Espiritual: Magia Natural (20 XP)</h4>
+                     <p className="text-xs text-zinc-400">Poder emanado do cerne druídico (Usa o atributo Espírito). Especializada em Transformações em animais, Poções de Herbalismo, Falar com feras e Controlar Plantas.</p>
+                   </div>
+                   <button onClick={() => handleBuyTechnique({name: "Magia Natural", cost: 20})} disabled={availableXP < getDiscountedXP(20)} className={`shrink-0 px-4 py-2 rounded text-xs font-bold transition-colors ${availableXP >= getDiscountedXP(20) ? 'bg-lime-700 hover:bg-lime-600 text-white shadow-lg shadow-lime-900/50' : 'bg-zinc-700 text-zinc-500 cursor-not-allowed'}`}>
+                     Desbloquear Doutrina ({getDiscountedXP(20)} XP)
+                   </button>
+                 </div>
+               )}
+
+               {!myTechs.includes('Magia Profana') && (
+                 <div className="p-4 bg-slate-950/40 border border-slate-700/50 rounded flex justify-between items-center mt-2">
+                   <div>
+                     <h4 className="font-bold text-slate-300">Doutrina Espiritual: Magia Profana (20 XP)</h4>
+                     <p className="text-xs text-slate-400">Poder de pactos com o Além (Usa o atributo Espírito). Especializada em Maldições, Trevas, Possessão Demoníaca e teletransporte para o Inferno.</p>
+                   </div>
+                   <button onClick={() => handleBuyTechnique({name: "Magia Profana", cost: 20})} disabled={availableXP < getDiscountedXP(20)} className={`shrink-0 px-4 py-2 rounded text-xs font-bold transition-colors ${availableXP >= getDiscountedXP(20) ? 'bg-slate-700 hover:bg-slate-600 text-white shadow-lg shadow-slate-900/50' : 'bg-zinc-800 text-zinc-600 cursor-not-allowed'}`}>
+                     Desbloquear Doutrina ({getDiscountedXP(20)} XP)
+                   </button>
+                 </div>
+               )}
+             </div>
+
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-64 overflow-y-auto custom-scrollbar pr-2 mt-4">
+               {magiasExemploDB.map(magia => {
+                 const cost = getDiscountedXP(magia.cost);
+                 const canAfford = availableXP >= cost;
+                 const isBought = character.magias?.includes(magia.name);
+                 const isRitual = magia.type.includes("Ritual");
+                 
+                 const requiresAdivinhacao = magia.type.includes("Adivinhação") && !myTechs.includes("Adivinhação");
+                 const requiresEncantamento = magia.type.includes("Encantamento") && !myTechs.includes("Encantamento");
+                 const requiresTransmutacao = magia.type.includes("Transmutação") && !myTechs.includes("Transmutação");
+                 const requiresConjuracao = magia.type.includes("Conjuração") && !myTechs.includes("Conjuração");
+                 const requiresEvocacao = magia.type.includes("Evocação") && !myTechs.includes("Evocação");
+                 const requiresIlusao = magia.type.includes("Ilusão") && !myTechs.includes("Ilusão");
+                 const requiresAbjuracao = magia.type.includes("Abjuração") && !myTechs.includes("Abjuração");
+                 const requiresNecromancia = magia.type.includes("Necromancia") && !myTechs.includes("Necromancia");
+                 const requiresMagiaSacra = magia.type.includes("Magia Sacra") && !myTechs.includes("Magia Sacra");
+                 const requiresMagiaNatural = magia.type.includes("Magia Natural") && !myTechs.includes("Magia Natural");
+                 const requiresMagiaProfana = magia.type.includes("Magia Profana") && !myTechs.includes("Magia Profana");
+                 
+                 const requiresSchool = requiresAdivinhacao || requiresEncantamento || requiresTransmutacao || requiresConjuracao || requiresEvocacao || requiresIlusao || requiresAbjuracao || requiresNecromancia || requiresMagiaSacra || requiresMagiaNatural || requiresMagiaProfana;
+                 
+                 if (isBought && !isRitual) return null; // Esconde magias compradas
+                 if (isRitual) return null; // Rituais vêm com a escola de graça
+
+                 return (
+                   <div key={magia.id} className={`p-3 rounded border flex justify-between items-center ${requiresSchool ? 'bg-zinc-900 border-zinc-800 opacity-60' : 'bg-zinc-800 border-zinc-700'}`}>
+                     <div className="flex-1 pr-4">
+                       <div className="flex items-center gap-2 mb-1">
+                         <span className="font-bold text-zinc-200">{magia.name}</span>
+                         <span className="text-[10px] uppercase bg-fuchsia-950 border border-fuchsia-900 text-fuchsia-300 px-1.5 py-0.5 rounded">{magia.type}</span>
+                         {magia.minDegree > 0 && <span className="text-[10px] uppercase bg-red-950 text-red-400 border border-red-900 px-1.5 py-0.5 rounded">Grau {magia.minDegree}+</span>}
+                       </div>
+                       <p className="text-xs text-zinc-400 mb-1">{magia.desc}</p>
+                       <div className="flex gap-2 text-[10px] text-zinc-500 font-bold uppercase flex-wrap">
+                         {magia.tags?.map(t => <span key={t} className="bg-zinc-900 px-1 py-0.5 rounded border border-zinc-700">{t}</span>)}
+                       </div>
+                     </div>
+                     <button 
+                       onClick={() => handleBuyMagia(magia)} 
+                       disabled={!canAfford || requiresSchool} 
+                       className={`shrink-0 px-3 py-1.5 rounded text-xs font-bold transition-colors ${(canAfford && !requiresSchool) ? 'bg-fuchsia-700 hover:bg-fuchsia-600 text-white' : 'bg-zinc-700 text-zinc-500 cursor-not-allowed'}`}
+                     >
+                       {requiresSchool ? 'Bloqueada' : `Aprender (${cost} XP)`}
+                     </button>
+                   </div>
+                 );
+               })}
+             </div>
+           </div>
+        </div>
+      )}
+
+      {/* Grid Principal 1: Lojas e Status Mágico */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        
+        {/* Painel Mágico / Ocultismo */}
+        <div className="bg-fuchsia-950/20 p-5 rounded-lg border border-fuchsia-900/50 shadow-md flex flex-col justify-between md:col-span-1">
+           <div>
+             <h2 className="text-lg font-bold text-fuchsia-400 mb-4 border-b border-fuchsia-900/50 pb-2">Ocultismo</h2>
+             {canCastSpells ? (
+               <div className="space-y-3">
+                 <p className="text-xs text-zinc-300">Você é um ser desperto para as energias invisíveis.</p>
+                 <div className="flex flex-wrap gap-2">
+                   {isArcano && <span className="px-2 py-1 bg-cyan-900/50 border border-cyan-700 text-cyan-300 text-[10px] font-bold rounded uppercase">Magia Arcana</span>}
+                   {isDivino && <span className="px-2 py-1 bg-amber-900/50 border border-amber-700 text-amber-300 text-[10px] font-bold rounded uppercase">Magia Divina</span>}
+                   {isInato && <span className="px-2 py-1 bg-fuchsia-900/50 border border-fuchsia-700 text-fuchsia-300 text-[10px] font-bold rounded uppercase">Poder Inato</span>}
+                 </div>
+                 
+                 <div className="mt-4 p-3 bg-zinc-900 border border-zinc-700 rounded">
+                   <span className="block text-[10px] uppercase text-zinc-400 mb-1">Status de Conjuração Física</span>
+                   <span className={`text-sm ${castStatusColor}`}>{castStatusText}</span>
+                   {castReasons.length > 0 && (
+                     <ul className="mt-1 text-[10px] text-zinc-500 list-disc list-inside">
+                       {castReasons.map((r, i) => <li key={i}>{r}</li>)}
+                     </ul>
+                   )}
+                 </div>
+
+                 {character.focos?.length > 0 && (
+                   <div className="mt-4">
+                     <span className="block text-[10px] uppercase text-zinc-400 mb-2">Focos Equipados (Convicção)</span>
+                     <div className="space-y-2">
+                       {character.focos.map((foco, idx) => (
+                         <div key={idx} className="flex justify-between items-center bg-zinc-900 p-2 rounded border border-fuchsia-900/30">
+                           <span className="text-xs text-zinc-200 font-bold truncate max-w-[80px]">{foco.name}</span>
+                           <div className="flex items-center gap-2">
+                              <button onClick={() => handleAdjustFoco(idx, -1)} className="w-5 h-5 flex items-center justify-center bg-zinc-800 text-zinc-400 hover:text-white rounded">-</button>
+                              <span className="text-xs font-bold text-fuchsia-400">{foco.storedConv}/{foco.maxConv}</span>
+                              <button onClick={() => handleAdjustFoco(idx, 1)} className="w-5 h-5 flex items-center justify-center bg-zinc-800 text-zinc-400 hover:text-white rounded">+</button>
+                           </div>
+                         </div>
+                       ))}
+                     </div>
+                   </div>
+                 )}
+               </div>
+             ) : (
+               <p className="text-xs text-zinc-500 italic">Você não possui acesso às artes místicas ou divinas. Compre Técnicas como "Erudição Mágica" ou "Espiritualidade".</p>
+             )}
+           </div>
+           
+           <button 
+             onClick={() => { setShowMagiaTab(!showMagiaTab); setShowEvolucao(false); setShowMercador(false); }} 
+             disabled={!canCastSpells}
+             className={`mt-4 w-full py-2 rounded text-sm font-bold transition-colors ${!canCastSpells ? 'bg-zinc-800 text-zinc-600 cursor-not-allowed' : showMagiaTab ? 'bg-fuchsia-900 text-white border border-fuchsia-700' : 'bg-fuchsia-700 hover:bg-fuchsia-600 text-white shadow-[0_0_15px_rgba(192,38,211,0.3)]'}`}
+           >
+             {showMagiaTab ? 'Fechar Magias' : '🔮 Ver Magias'}
+           </button>
+        </div>
+
+        <div className="bg-zinc-800 p-5 rounded-lg border border-zinc-700 shadow-md flex flex-col justify-between md:col-span-3">
+          <div className="flex justify-between items-center mb-4 border-b border-zinc-700 pb-2">
+             <h2 className="text-lg font-bold text-emerald-400">Status Geral & Finanças</h2>
+             <div className="flex gap-4">
+                <span className="text-sm font-bold text-amber-400 bg-amber-950/30 px-3 py-1 rounded border border-amber-900/50">{availableOuro} po</span>
+                <span className="text-sm font-bold text-cyan-400 bg-cyan-950/30 px-3 py-1 rounded border border-cyan-900/50">{availableXP} XP</span>
+             </div>
+          </div>
+
+          <div className="grid grid-cols-4 gap-3 mb-4">
+            <div className="bg-zinc-900 p-3 rounded border border-zinc-700 text-center">
+              <span className="block text-[10px] uppercase tracking-wider text-zinc-400 mb-1">Vitalidade</span>
+              <span className="font-bold text-emerald-400 text-xl">{baseVitalidade}</span>
+            </div>
+            <div className="bg-zinc-900 p-3 rounded border border-zinc-700 text-center">
+              <span className="block text-[10px] uppercase tracking-wider text-zinc-400 mb-1">Resistência</span>
+              <span className="font-bold text-emerald-400 text-xl">{resistencia}</span>
+            </div>
+            <div className="bg-zinc-900 p-3 rounded border border-zinc-700 text-center">
+              <span className="block text-[10px] uppercase tracking-wider text-zinc-400 mb-1">Convicção</span>
+              <span className="font-bold text-emerald-400 text-xl">{conviccao}</span>
+            </div>
+            <div className="bg-zinc-900 p-3 rounded border border-zinc-700 text-center">
+              <span className="block text-[10px] uppercase tracking-wider text-zinc-400 mb-1">Lim. Dano</span>
+              <span className="font-bold text-emerald-400 text-xl">{limiarDanoTotal}</span>
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <button onClick={() => { setShowMercador(!showMercador); setShowEvolucao(false); setShowMagiaTab(false); }} className={`flex-1 py-2 rounded text-sm font-bold transition-colors ${showMercador ? 'bg-zinc-700 hover:bg-zinc-600 text-white' : 'bg-amber-600 hover:bg-amber-500 text-white'}`}>
+              🛡️ Mercador Local
+            </button>
+            <button onClick={() => { setShowEvolucao(!showEvolucao); setShowMercador(false); setShowMagiaTab(false); }} className={`flex-1 py-2 rounded text-sm font-bold transition-colors ${showEvolucao ? 'bg-zinc-700 hover:bg-zinc-600 text-white' : 'bg-cyan-700 hover:bg-cyan-600 text-white'}`}>
+              🎓 Gastar XP
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* LOJA DE EVOLUÇÃO (XP) */}
       {showEvolucao && (
         <div className="mb-8 bg-zinc-900 p-6 rounded-lg border border-cyan-800 shadow-lg shadow-cyan-900/20 animate-fade-in">
           <div className="flex justify-between items-center mb-6 border-b border-zinc-700 pb-3">
             <h2 className="text-2xl font-bold text-cyan-400">Evolução de Personagem</h2>
-            <span className="text-lg font-bold text-zinc-300">XP Livre: <span className="text-cyan-400">{availableXP}</span></span>
+            <div className="text-right">
+              <span className="text-lg font-bold text-zinc-300 block">XP Livre: <span className="text-cyan-400">{availableXP}</span></span>
+              {xpDiscount > 0 && <span className="text-xs text-emerald-400 block font-bold">Desconto Rápido: -{xpDiscount} XP em tudo</span>}
+            </div>
           </div>
 
           <h3 className="text-lg font-bold text-zinc-200 mb-3">Melhorar Atributos</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             {Object.entries(character.finalAttributes || {}).map(([attr, val]) => {
               const baseValue = character.attributes?.[attr] || val;
-              const cost = baseValue * 5;
+              const cost = getDiscountedXP(baseValue * 5);
               const canAfford = availableXP >= cost;
               return (
                 <div key={attr} className="bg-zinc-800 p-3 rounded border border-zinc-700 text-center flex flex-col justify-between">
@@ -519,29 +1033,29 @@ export default function CharacterSheet() {
                 <span className="block text-sm text-zinc-400 mb-1">Aumentar Vitalidade</span>
                 <span className="text-2xl font-bold text-white">{baseVitalidade} <span className="text-sm text-zinc-500">→ {baseVitalidade + 1}</span></span>
               </div>
-              <button onClick={handleBuyVitality} disabled={availableXP < baseVitalidade} className={`px-4 py-2 rounded text-sm font-bold transition-colors ${availableXP >= baseVitalidade ? 'bg-emerald-600 hover:bg-emerald-500 text-white' : 'bg-zinc-700 text-zinc-500 cursor-not-allowed'}`}>
-                Comprar ({baseVitalidade} XP)
+              <button onClick={handleBuyVitality} disabled={availableXP < getDiscountedXP(baseVitalidade)} className={`px-4 py-2 rounded text-sm font-bold transition-colors ${availableXP >= getDiscountedXP(baseVitalidade) ? 'bg-emerald-600 hover:bg-emerald-500 text-white' : 'bg-zinc-700 text-zinc-500 cursor-not-allowed'}`}>
+                Comprar ({getDiscountedXP(baseVitalidade)} XP)
               </button>
             </div>
           </div>
 
           <h3 className="text-lg font-bold text-fuchsia-400 mb-2 border-t border-zinc-700 pt-6">Especialização: Perícias</h3>
           <p className="text-xs text-zinc-400 mb-4 leading-relaxed">
-            Perícias aumentam o tier dos dados e recuperam perda de esquiva de armaduras. (Sequencial Nv 1 a 5).
+            Perícias aumentam o tier dos dados e recuperam perda de esquiva. (Sequencial Nv 1 a 5).
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <div className="bg-fuchsia-950/20 p-4 rounded border border-fuchsia-900/50 flex flex-col justify-center">
               <span className="block font-bold text-zinc-200 mb-2 text-sm">Adquirir Nova Perícia (Nível 1)</span>
               <form onSubmit={handleAddPericia} className="flex gap-2">
                 <input type="text" value={newPericia} onChange={(e) => setNewPericia(e.target.value)} placeholder="Ex: Espada Curta, Armadura..." className="flex-1 bg-zinc-900 border border-zinc-700 rounded p-2 text-sm text-white focus:outline-none focus:border-fuchsia-500"/>
-                <button type="submit" disabled={availableXP < 20} className={`px-4 py-2 rounded text-sm font-bold transition-colors ${availableXP >= 20 ? 'bg-fuchsia-700 hover:bg-fuchsia-600 text-white shadow-lg shadow-fuchsia-900/50' : 'bg-zinc-700 text-zinc-500 cursor-not-allowed'}`}>Aprender (20 XP)</button>
+                <button type="submit" disabled={availableXP < getDiscountedXP(20)} className={`px-4 py-2 rounded text-sm font-bold transition-colors ${availableXP >= getDiscountedXP(20) ? 'bg-fuchsia-700 hover:bg-fuchsia-600 text-white shadow-lg shadow-fuchsia-900/50' : 'bg-zinc-700 text-zinc-500 cursor-not-allowed'}`}>Aprender ({getDiscountedXP(20)} XP)</button>
               </form>
             </div>
             <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-1">
               {character.pericias?.length === 0 && <p className="text-sm text-zinc-500 italic p-3 text-center border border-dashed border-zinc-700 rounded">Nenhuma perícia adquirida.</p>}
               {character.pericias?.map((p, idx) => {
                 const isMax = p.level >= 5;
-                const cost = (p.level + 1) * 20; 
+                const cost = getDiscountedXP((p.level + 1) * 20); 
                 const canAfford = availableXP >= cost;
                 return (
                   <div key={idx} className="bg-zinc-900 p-2.5 rounded border border-fuchsia-900/40 flex justify-between items-center group">
@@ -583,7 +1097,8 @@ export default function CharacterSheet() {
             {myClassTechs.length === 0 && <p className="text-sm text-zinc-500 italic bg-zinc-900 p-3 rounded border border-zinc-800">Adquira uma classe primeiro para liberar suas técnicas.</p>}
             {myClassTechs.map(tech => {
               const isBought = myTechs.includes(tech.name);
-              const canAfford = availableXP >= tech.cost;
+              const cost = getDiscountedXP(tech.cost);
+              const canAfford = availableXP >= cost;
               const classTier1 = myClassTechs.filter(t => t.classReq === tech.classReq && t.tier === 1);
               const classTier2 = myClassTechs.filter(t => t.classReq === tech.classReq && t.tier === 2);
               const hasClassTier1 = classTier1.length > 0 ? classTier1.every(t => myTechs.includes(t.name)) : true;
@@ -607,7 +1122,7 @@ export default function CharacterSheet() {
                     {isLocked && <p className="text-xs text-red-400 mt-1">🔒 {lockReason}</p>}
                   </div>
                   <button onClick={() => handleBuyTechnique(tech)} disabled={!canAfford || isLocked} className={`shrink-0 px-3 py-1.5 rounded text-xs font-bold transition-colors ${(canAfford && !isLocked) ? 'bg-cyan-700 hover:bg-cyan-600 text-white' : 'bg-zinc-700 text-zinc-500 cursor-not-allowed'}`}>
-                    Comprar ({tech.cost} XP)
+                    Comprar ({cost} XP)
                   </button>
                 </div>
               );
@@ -618,7 +1133,8 @@ export default function CharacterSheet() {
           <div className="space-y-3 max-h-80 overflow-y-auto custom-scrollbar pr-2">
             {tecnicasPadraoDB.map(tech => {
               const isBought = myTechs.includes(tech.name);
-              const canAfford = availableXP >= tech.cost;
+              const cost = getDiscountedXP(tech.cost);
+              const canAfford = availableXP >= cost;
               if (isBought) return null;
 
               let catColor = "text-zinc-300 bg-zinc-700";
@@ -639,7 +1155,7 @@ export default function CharacterSheet() {
                     {tech.prereqs && <p className="text-[10px] text-zinc-500 mt-1 uppercase">Requer: {tech.prereqs}</p>}
                   </div>
                   <button onClick={() => handleBuyTechnique(tech)} disabled={!canAfford} className={`shrink-0 px-3 py-1.5 rounded text-xs font-bold transition-colors ${canAfford ? 'bg-cyan-700 hover:bg-cyan-600 text-white' : 'bg-zinc-700 text-zinc-500 cursor-not-allowed'}`}>
-                    Comprar ({tech.cost} XP)
+                    Comprar ({cost} XP)
                   </button>
                 </div>
               );
@@ -660,6 +1176,7 @@ export default function CharacterSheet() {
             <button onClick={() => setLojaTab('armas')} className={`px-4 py-1.5 rounded text-sm font-bold transition-colors ${lojaTab === 'armas' ? 'bg-amber-600 text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}>Armas Ofensivas</button>
             <button onClick={() => setLojaTab('armaduras')} className={`px-4 py-1.5 rounded text-sm font-bold transition-colors ${lojaTab === 'armaduras' ? 'bg-amber-600 text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}>Armaduras / Escudos</button>
             <button onClick={() => setLojaTab('reservatorios')} className={`px-4 py-1.5 rounded text-sm font-bold transition-colors ${lojaTab === 'reservatorios' ? 'bg-amber-600 text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}>Bolsas e Mochilas</button>
+            <button onClick={() => setLojaTab('focos')} className={`px-4 py-1.5 rounded text-sm font-bold transition-colors ${lojaTab === 'focos' ? 'bg-amber-600 text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}>Focos de Conjuração</button>
           </div>
 
           {lojaTab === 'armas' && (
@@ -743,12 +1260,37 @@ export default function CharacterSheet() {
             </div>
           )}
 
+          {lojaTab === 'focos' && (
+            <div className="space-y-3 max-h-96 overflow-y-auto custom-scrollbar pr-2">
+              <p className="text-xs text-zinc-400 mb-2">Itens de conjuração armazenam Convicção para evitar que você fique exausto. O mago gasta de sua Convicção real para "recarregar" a bateria mágica do item quando quiser.</p>
+              {focosDB.map(foco => {
+                const canAfford = availableOuro >= foco.price;
+                return (
+                  <div key={foco.id} className="p-3 rounded border bg-zinc-800 border-zinc-700 flex justify-between items-center">
+                    <div className="flex-1 pr-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-bold text-zinc-200 text-base">{foco.name}</span>
+                        <span className="text-[10px] font-bold uppercase bg-fuchsia-950 border border-fuchsia-900 text-fuchsia-400 px-1.5 py-0.5 rounded">Guarda {foco.maxConv} Convicção</span>
+                      </div>
+                      <div className="flex gap-4 text-xs text-zinc-400">
+                        <span><b className="text-zinc-300">Peso:</b> {foco.weight}kg</span>
+                      </div>
+                    </div>
+                    <button onClick={() => handleBuyFoco(foco)} disabled={!canAfford} className={`shrink-0 px-4 py-2 rounded text-xs font-bold transition-colors ${canAfford ? 'bg-amber-600 hover:bg-amber-500 text-white' : 'bg-zinc-700 text-zinc-500 cursor-not-allowed'}`}>
+                      Comprar ({foco.price} po)
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Grid Principal 1: Atributos, Recursos e Lojas */}
+      {/* PAINÉIS PRINCIPAIS (Compactados) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         
+        {/* Atributos Finais */}
         <div className="bg-zinc-800 p-5 rounded-lg border border-zinc-700 shadow-md">
           <h2 className="text-lg font-bold text-emerald-400 mb-4 border-b border-zinc-700 pb-2">Atributos Finais</h2>
           <div className="grid grid-cols-2 gap-3">
@@ -759,7 +1301,7 @@ export default function CharacterSheet() {
                 <span className="block text-[10px] text-emerald-500 font-bold uppercase tracking-widest">{getDiceForAttribute(val)}</span>
                 
                 <button 
-                  onClick={() => setDiceSetup({ attr: attr, baseVal: val, periciaLevel: 0, result: null })} 
+                  onClick={() => setDiceSetup({ attr: attr, baseVal: val, periciaLevel: 0, modifier: 'normal', result: null })} 
                   className="absolute inset-0 bg-fuchsia-800/95 text-white font-bold opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center flex-col" 
                   title="Rolar Dados"
                 >
@@ -771,153 +1313,52 @@ export default function CharacterSheet() {
           </div>
         </div>
 
-        <div className="bg-zinc-800 p-5 rounded-lg border border-zinc-700 shadow-md">
-          <h2 className="text-lg font-bold text-emerald-400 mb-4 border-b border-zinc-700 pb-2">Recursos Básicos</h2>
-          <div className="space-y-2.5">
-            <div className="flex justify-between items-center bg-zinc-900 p-2 rounded border border-zinc-700">
-              <span className="text-sm text-zinc-300">Vitalidade</span>
-              <span className="font-bold text-emerald-400">{baseVitalidade}</span>
-            </div>
-            <div className="flex justify-between items-center bg-zinc-900 p-2 rounded border border-zinc-700" title={`Média de ${resistanceMultiplier} por ponto (d${dieSize})`}>
-              <span className="text-sm text-zinc-300">Resistência</span>
-              <span className="font-bold text-emerald-400">{resistencia}</span>
-            </div>
-            <div className="flex justify-between items-center bg-zinc-900 p-2 rounded border border-zinc-700">
-              <span className="text-sm text-zinc-300">Convicção</span>
-              <span className="font-bold text-emerald-400">{conviccao}</span>
-            </div>
-            <div className="flex justify-between items-center bg-zinc-900 p-2 rounded border border-zinc-700">
-              <span className="text-sm text-zinc-300">Limiar de Dano (Corpo)</span>
-              <span className="font-bold text-emerald-400">{limiarDanoTotal}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-zinc-800 p-5 rounded-lg border border-zinc-700 shadow-md flex flex-col justify-between">
-          <div>
-            <h2 className="text-lg font-bold text-emerald-400 mb-4 border-b border-zinc-700 pb-2">Ouro & Experiência</h2>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center bg-zinc-900 p-2.5 rounded border border-amber-900/50 bg-amber-950/10">
-                <span className="text-sm text-zinc-300">Ouro (Po)</span>
-                <span className="font-bold text-amber-400 text-lg">{availableOuro}</span>
-              </div>
-              <div className="flex justify-between items-center bg-zinc-900 p-2.5 rounded border border-cyan-900/50 bg-cyan-950/10">
-                <span className="text-sm text-zinc-300">Experiência (XP)</span>
-                <span className="font-bold text-cyan-400 text-lg">{availableXP} <span className="text-xs text-zinc-500 font-normal">/ {xpTotal}</span></span>
+        {/* Ações e Combate Rápido */}
+        <div className="bg-zinc-800 p-5 rounded-lg border border-zinc-700 shadow-md md:col-span-2">
+          <h2 className="text-lg font-bold text-emerald-400 mb-4 border-b border-zinc-700 pb-2">Painel Tático (Ações & Defesa)</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <ul className="space-y-1.5 text-xs text-zinc-300 mb-4 bg-zinc-900 p-3 rounded border border-zinc-700">
+                <li className="flex justify-between border-b border-zinc-800 pb-1">
+                  <span className="font-bold text-zinc-100">Parcial:</span> 
+                  <span className={`font-bold ${hasMovementLimit || encumbrancePenalty > 0 ? 'text-red-400' : 'text-emerald-400'}`}>{deslocamentoParcial}m <span className="text-zinc-500 font-normal">(Livre)</span></span>
+                </li>
+                <li className="flex justify-between border-b border-zinc-800 pb-1">
+                  <span className="font-bold text-zinc-100">Total:</span> 
+                  <span className={`font-bold ${hasMovementLimit || encumbrancePenalty > 0 ? 'text-red-400' : 'text-emerald-400'}`}>{deslocamentoTotal}m <span className="text-zinc-500 font-normal">(Ação Principal)</span></span>
+                </li>
+                <li className="flex justify-between">
+                  <span className="font-bold text-zinc-100">Disparada:</span> 
+                  <span className={`font-bold ${hasMovementLimit || encumbrancePenalty > 0 ? 'text-red-400' : 'text-emerald-400'}`}>{deslocamentoDisparada}m <span className="text-zinc-500 font-normal">(Princ + Reação)</span></span>
+                </li>
+              </ul>
+              
+              <div className="flex flex-wrap gap-1.5 text-[10px] font-bold text-white justify-center">
+                <span className="bg-zinc-700 border border-zinc-600 px-2 py-1 rounded">1 Parcial</span>
+                <span className="bg-blue-900 border border-blue-700 px-2 py-1 rounded">1 Auxiliar</span>
+                <span className="bg-amber-900 border border-amber-700 px-2 py-1 rounded">1 Principal</span>
+                <span className="bg-red-900 border border-red-700 px-2 py-1 rounded">1 Reação</span>
               </div>
             </div>
-          </div>
-          <div className="flex gap-2 mt-4">
-            <button onClick={() => { setShowMercador(!showMercador); setShowEvolucao(false); }} className={`flex-1 py-2 rounded text-sm font-bold transition-colors ${showMercador ? 'bg-zinc-700 hover:bg-zinc-600 text-white' : 'bg-amber-600 hover:bg-amber-500 text-white shadow-lg shadow-amber-900/40'}`}>
-              {showMercador ? 'Fechar Loja' : '🛡️ Mercador Local'}
-            </button>
-            <button onClick={() => { setShowEvolucao(!showEvolucao); setShowMercador(false); }} className={`flex-1 py-2 rounded text-sm font-bold transition-colors ${showEvolucao ? 'bg-zinc-700 hover:bg-zinc-600 text-white' : 'bg-cyan-700 hover:bg-cyan-600 text-white shadow-lg shadow-cyan-900/40'}`}>
-              {showEvolucao ? 'Fechar Evolução' : '🎓 Gastar XP'}
-            </button>
+
+            <div className="grid grid-cols-2 gap-2 h-max">
+              <div className="bg-zinc-900 p-2 rounded border border-zinc-700 text-center">
+                <span className="block text-[10px] uppercase tracking-wider text-zinc-400 mb-1">Defesa Base</span>
+                <span className="font-bold text-emerald-400 text-2xl">{defesaTotal}</span>
+              </div>
+              <div className="bg-zinc-900 p-2 rounded border border-zinc-700 text-center">
+                <span className="block text-[10px] uppercase tracking-wider text-zinc-400 mb-1">Esquiva</span>
+                <span className={`font-bold text-2xl ${penalidadeEsquivaEfetiva > 0 ? 'text-yellow-400' : 'text-emerald-400'}`}>{esquivaTotal}</span>
+                <span className="text-[9px] text-zinc-500 block">+{dodgeBonus} na Reação</span>
+              </div>
+            </div>
           </div>
         </div>
-
       </div>
 
-      {/* GRID: PAINEL TÁTICO DE COMBATE E EQUIPAMENTOS */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        
-        <div className="bg-zinc-800 p-5 rounded-lg border border-zinc-700 shadow-md">
-          <h2 className="text-lg font-bold text-emerald-400 mb-4 border-b border-zinc-700 pb-2">Ações & Deslocamento</h2>
-          
-          <ul className="space-y-2 text-sm text-zinc-300 mb-5 bg-zinc-900 p-3 rounded border border-zinc-700">
-            <li className="flex justify-between border-b border-zinc-800 pb-1">
-              <span className="font-bold text-zinc-100">Deslocamento Parcial:</span> 
-              <span className={`font-bold ${hasMovementLimit || encumbrancePenalty > 0 ? 'text-red-400' : 'text-emerald-400'}`}>{deslocamentoParcial}m <span className="text-zinc-500 text-xs font-normal">(Livre)</span></span>
-            </li>
-            <li className="flex justify-between border-b border-zinc-800 pb-1">
-              <span className="font-bold text-zinc-100">Deslocamento Total:</span> 
-              <span className={`font-bold ${hasMovementLimit || encumbrancePenalty > 0 ? 'text-red-400' : 'text-emerald-400'}`}>{deslocamentoTotal}m <span className="text-zinc-500 text-xs font-normal">(Ação Principal)</span></span>
-            </li>
-            <li className="flex justify-between border-b border-zinc-800 pb-1">
-              <span className="font-bold text-zinc-100">Disparada:</span> 
-              <span className={`font-bold ${hasMovementLimit || encumbrancePenalty > 0 ? 'text-red-400' : 'text-emerald-400'}`}>{deslocamentoDisparada}m <span className="text-zinc-500 text-xs font-normal">(Principal + Reação)</span></span>
-            </li>
-            {(hasMovementLimit || encumbrancePenalty > 0) && (
-              <li className="text-[10px] text-red-400 text-center italic mt-1">
-                 O deslocamento está limitado {hasMovementLimit && encumbrancePenalty > 0 ? 'pela Armadura e Sobrecarga' : hasMovementLimit ? 'pela Armadura' : 'pela sua Sobrecarga física'}.
-              </li>
-            )}
-          </ul>
-
-          <span className="block font-bold text-zinc-400 mb-2 text-xs uppercase tracking-wider">Ações por Turno</span>
-          <div className="flex flex-wrap gap-2 text-xs font-bold text-white">
-            <span className="bg-zinc-700 border border-zinc-600 px-2.5 py-1.5 rounded shadow">1 Parcial</span>
-            <span className="bg-blue-900 border border-blue-700 text-blue-100 px-2.5 py-1.5 rounded shadow">1 Auxiliar</span>
-            <span className="bg-amber-900 border border-amber-700 text-amber-100 px-2.5 py-1.5 rounded shadow">1 Principal</span>
-            <span className="bg-red-900 border border-red-700 text-red-100 px-2.5 py-1.5 rounded shadow">1 Reação</span>
-          </div>
-        </div>
-
-        <div className="bg-zinc-800 p-5 rounded-lg border border-zinc-700 shadow-md">
-          <h2 className="text-lg font-bold text-emerald-400 mb-4 border-b border-zinc-700 pb-2">Combate Rápido</h2>
-          
-          <div className="grid grid-cols-3 gap-2 mb-4">
-            <div className="bg-zinc-900 p-2 rounded border border-zinc-700 text-center flex flex-col justify-center">
-              <span className="block text-[10px] uppercase tracking-wider text-zinc-400 mb-1">Defesa Base</span>
-              <span className="font-bold text-emerald-400 text-xl">{defesaTotal}</span>
-            </div>
-            <div className="bg-zinc-900 p-2 rounded border border-zinc-700 text-center flex flex-col justify-center">
-              <span className="block text-[10px] uppercase tracking-wider text-zinc-400 mb-1">Esquiva</span>
-              <span className={`font-bold text-xl ${penalidadeEsquivaEfetiva > 0 ? 'text-yellow-400' : 'text-emerald-400'}`}>{esquivaTotal}</span>
-              <span className="text-[10px] text-zinc-500">(+{dodgeBonus} na Reação)</span>
-            </div>
-            <div className="bg-zinc-900 p-2 rounded border border-zinc-700 text-center flex flex-col justify-center">
-              <span className="block text-[10px] uppercase tracking-wider text-zinc-400 mb-1">Aparar/Bloq.</span>
-              <span className="font-bold text-emerald-400 text-sm">½ Dano</span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <span className="block font-bold text-zinc-400 mb-1 text-xs uppercase tracking-wider">Armas Equipadas</span>
-              {character.weapons && character.weapons.length > 0 ? (
-                <div className="space-y-1.5 max-h-32 overflow-y-auto custom-scrollbar pr-1">
-                  {character.weapons.map((w, idx) => (
-                    <div key={idx} className="bg-zinc-900 p-2 rounded border border-amber-900/50 flex justify-between items-center group">
-                      <div>
-                        <div className="flex items-baseline gap-1.5"><span className="font-bold text-amber-400 text-xs">{w.name}</span></div>
-                        <span className="text-[10px] font-bold text-white tracking-widest block">{w.damage}</span>
-                      </div>
-                      <button onClick={() => handleSellWeapon(idx, w.price)} className="text-red-400 hover:text-red-300 font-bold px-1 opacity-0 group-hover:opacity-100 transition-opacity" title="Vender">×</button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-[10px] text-zinc-500 italic bg-zinc-900 p-2 rounded border border-zinc-700 text-center">Nenhuma arma.</p>
-              )}
-            </div>
-
-            <div>
-              <span className="block font-bold text-zinc-400 mb-1 text-xs uppercase tracking-wider">Armadura / Escudo</span>
-              {character.armors && character.armors.length > 0 ? (
-                <div className="space-y-1.5 max-h-32 overflow-y-auto custom-scrollbar pr-1">
-                  {character.armors.map((arm, idx) => (
-                    <div key={idx} className="bg-zinc-900 p-2 rounded border border-blue-900/50 flex justify-between items-center group">
-                      <div>
-                        <div className="flex items-baseline gap-1.5"><span className="font-bold text-blue-400 text-xs">{arm.name}</span></div>
-                        <span className="text-[10px] font-bold text-white tracking-widest block">+ {arm.defense} Defesa</span>
-                      </div>
-                      <button onClick={() => handleSellArmor(idx, arm.price)} className="text-red-400 hover:text-red-300 font-bold px-1 opacity-0 group-hover:opacity-100 transition-opacity" title="Vender">×</button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-[10px] text-zinc-500 italic bg-zinc-900 p-2 rounded border border-zinc-700 text-center">Sem armadura.</p>
-              )}
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      {/* Terceira Linha: Técnicas e Perícias Adquiridas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      {/* Terceira Linha: Técnicas, Perícias e Magias */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         
         <div className="bg-zinc-800 p-5 rounded-lg border border-zinc-700 shadow-md">
           <h2 className="text-lg font-bold text-emerald-400 mb-3 border-b border-zinc-700 pb-2">Técnicas Adquiridas</h2>
@@ -952,7 +1393,7 @@ export default function CharacterSheet() {
         </div>
 
         <div className="bg-zinc-800 p-5 rounded-lg border border-zinc-700 shadow-md">
-          <h2 className="text-lg font-bold text-fuchsia-400 mb-3 border-b border-zinc-700 pb-2">Perícias (Especializações)</h2>
+          <h2 className="text-lg font-bold text-fuchsia-400 mb-3 border-b border-zinc-700 pb-2">Especializações (Perícias)</h2>
           {character.pericias && character.pericias.length > 0 ? (
             <ul className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-2">
               {character.pericias.map((p, idx) => (
@@ -965,7 +1406,31 @@ export default function CharacterSheet() {
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-zinc-500 text-center py-4 italic">Nenhuma perícia adicionada. Você pode comprar novas perícias através do menu "Evoluir Personagem".</p>
+            <p className="text-sm text-zinc-500 text-center py-4 italic">Nenhuma perícia adicionada.</p>
+          )}
+        </div>
+
+        <div className="bg-zinc-800 p-5 rounded-lg border border-zinc-700 shadow-md">
+          <h2 className="text-lg font-bold text-fuchsia-400 mb-3 border-b border-zinc-700 pb-2">Grimório Mágico</h2>
+          {character.magias && character.magias.length > 0 ? (
+            <ul className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-2">
+              {character.magias.map((m, idx) => {
+                const magDetails = magiasExemploDB.find(db => db.name === m);
+                return (
+                  <li key={idx} className="bg-zinc-900 p-2.5 rounded border border-fuchsia-900/50 flex flex-col justify-center">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold text-sm text-zinc-200">{m}</span>
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded border text-fuchsia-300 bg-fuchsia-950 border-fuchsia-900">
+                        {magDetails?.type || 'Magia'}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-zinc-500">Usa Atributo: <b className="text-zinc-300">{magDetails?.baseAttr || 'Mente'}</b></span>
+                  </li>
+                )
+              })}
+            </ul>
+          ) : (
+            <p className="text-sm text-zinc-500 text-center py-4 italic">Nenhuma magia conhecida.</p>
           )}
         </div>
 
@@ -994,26 +1459,26 @@ export default function CharacterSheet() {
              </p>
           </div>
           
-          <form onSubmit={handleAddItem} className="flex gap-2 mb-4">
-            <input type="text" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} placeholder="Adicionar item (Corda, Tocha, etc)..." className="flex-1 bg-zinc-900 border border-zinc-700 rounded p-2 text-sm text-white focus:outline-none focus:border-emerald-500"/>
-            <input type="number" step="0.1" value={newItemWeight} onChange={(e) => setNewItemWeight(e.target.value)} placeholder="Peso (Kg)" className="w-24 bg-zinc-900 border border-zinc-700 rounded p-2 text-sm text-white focus:outline-none focus:border-emerald-500"/>
-            <select value={newItemSlots} onChange={(e) => setNewItemSlots(Number(e.target.value))} className="bg-zinc-900 border border-zinc-700 rounded p-2 text-sm text-zinc-400 focus:outline-none focus:border-emerald-500">
-              <option value={0}>0 Slots (Miudezas)</option>
-              <option value={1}>1 Slot (Pequeno)</option>
-              <option value={2}>2 Slots (Médio)</option>
-              <option value={3}>3 Slots (Grande)</option>
+          <form onSubmit={handleAddItem} className="flex gap-2 mb-4 w-full">
+            <input type="text" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} placeholder="Adicionar item..." className="flex-[2] min-w-0 bg-zinc-900 border border-zinc-700 rounded p-2 text-sm text-white focus:outline-none focus:border-emerald-500"/>
+            <input type="number" step="0.1" value={newItemWeight} onChange={(e) => setNewItemWeight(e.target.value)} placeholder="Kg" className="flex-1 min-w-[60px] max-w-[80px] bg-zinc-900 border border-zinc-700 rounded p-2 text-sm text-white focus:outline-none focus:border-emerald-500"/>
+            <select value={newItemSlots} onChange={(e) => setNewItemSlots(Number(e.target.value))} className="flex-1 min-w-[80px] bg-zinc-900 border border-zinc-700 rounded p-2 text-sm text-zinc-400 focus:outline-none focus:border-emerald-500">
+              <option value={0}>0 Slot</option>
+              <option value={1}>1 Slot</option>
+              <option value={2}>2 Slots</option>
+              <option value={3}>3 Slots</option>
             </select>
-            <button type="submit" className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-sm font-bold transition-colors">Adicionar</button>
+            <button type="submit" className="shrink-0 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-sm font-bold transition-colors">Add</button>
           </form>
 
           <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar pr-1 flex-1">
             {character.weapons?.map((w, idx) => (
                <div key={`w-${idx}`} className="flex justify-between items-center bg-zinc-900 p-2.5 rounded border border-amber-900/40 text-sm">
-                 <div>
+                 <div className="truncate pr-2">
                    <span className="text-[10px] font-bold uppercase bg-amber-950 text-amber-400 px-1.5 py-0.5 rounded mr-2 border border-amber-900">Arma</span>
-                   <span className="text-zinc-200 font-bold">{w.name}</span>
+                   <span className="text-zinc-200 font-bold truncate">{w.name}</span>
                  </div>
-                 <div className="flex items-center gap-4">
+                 <div className="flex items-center gap-3 shrink-0">
                    <span className="text-xs text-zinc-500">{w.weight}kg <span className="mx-1">•</span> {getWeaponSlots(w)} slots</span>
                    <button onClick={() => handleSellWeapon(idx, w.price)} className="text-red-400 hover:text-red-300 font-bold px-1" title="Vender/Remover">×</button>
                  </div>
@@ -1021,13 +1486,25 @@ export default function CharacterSheet() {
             ))}
             {character.armors?.map((a, idx) => (
                <div key={`a-${idx}`} className="flex justify-between items-center bg-zinc-900 p-2.5 rounded border border-blue-900/40 text-sm">
-                 <div>
+                 <div className="truncate pr-2">
                    <span className="text-[10px] font-bold uppercase bg-blue-950 text-blue-400 px-1.5 py-0.5 rounded mr-2 border border-blue-900">Veste</span>
-                   <span className="text-zinc-200 font-bold">{a.name}</span>
+                   <span className="text-zinc-200 font-bold truncate">{a.name}</span>
                  </div>
-                 <div className="flex items-center gap-4">
+                 <div className="flex items-center gap-3 shrink-0">
                    <span className="text-xs text-zinc-500">{a.weight}kg <span className="mx-1">•</span> {a.defense} slots</span>
                    <button onClick={() => handleSellArmor(idx, a.price)} className="text-red-400 hover:text-red-300 font-bold px-1" title="Vender/Remover">×</button>
+                 </div>
+               </div>
+            ))}
+            {character.focos?.map((f, idx) => (
+               <div key={`f-${idx}`} className="flex justify-between items-center bg-zinc-900 p-2.5 rounded border border-fuchsia-900/40 text-sm">
+                 <div className="truncate pr-2">
+                   <span className="text-[10px] font-bold uppercase bg-fuchsia-950 text-fuchsia-400 px-1.5 py-0.5 rounded mr-2 border border-fuchsia-900">Foco</span>
+                   <span className="text-zinc-200 font-bold truncate">{f.name}</span>
+                 </div>
+                 <div className="flex items-center gap-3 shrink-0">
+                   <span className="text-xs text-zinc-500">{f.weight}kg <span className="mx-1">•</span> {f.weight === 0 ? 0 : (f.weight > 1 ? 2 : 1)} slots</span>
+                   <button onClick={() => handleSellFoco(idx, f.price)} className="text-red-400 hover:text-red-300 font-bold px-1" title="Vender/Remover">×</button>
                  </div>
                </div>
             ))}
@@ -1035,18 +1512,18 @@ export default function CharacterSheet() {
                const resFlag = isReservoir(item.name);
                return (
                  <div key={`i-${idx}`} className={`flex justify-between items-center bg-zinc-900 p-2.5 rounded border text-sm ${resFlag ? 'border-emerald-900/40' : 'border-zinc-700'}`}>
-                   <div>
-                     <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded mr-2 border ${resFlag ? 'bg-emerald-950 text-emerald-400 border-emerald-900' : 'bg-zinc-800 text-zinc-400 border-zinc-600'}`}>{resFlag ? 'Mochila' : 'Comum'}</span>
-                     <span className="text-zinc-200">{item.name}</span>
+                   <div className="truncate pr-2">
+                     <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded mr-2 border ${resFlag ? 'bg-emerald-950 text-emerald-400 border-emerald-900' : 'bg-zinc-800 text-zinc-400 border-zinc-600'}`}>{resFlag ? 'Mochila' : 'Item'}</span>
+                     <span className="text-zinc-200 truncate">{item.name}</span>
                    </div>
-                   <div className="flex items-center gap-4">
+                   <div className="flex items-center gap-3 shrink-0">
                      <span className="text-xs text-zinc-500">{item.weight}kg <span className="mx-1">•</span> {resFlag ? '0' : item.slots} slots</span>
                      <button onClick={() => handleRemoveItem(idx)} className="text-red-400 hover:text-red-300 font-bold px-1" title="Vender/Remover">×</button>
                    </div>
                  </div>
                );
             })}
-            {totalSlots === 0 && normalizedItems.length === 0 && character.weapons?.length === 0 && character.armors?.length === 0 && <p className="text-sm text-zinc-500 text-center py-6 border border-dashed border-zinc-700 rounded">Inventário completamente vazio.</p>}
+            {totalSlots === 0 && normalizedItems.length === 0 && character.weapons?.length === 0 && character.armors?.length === 0 && character.focos?.length === 0 && <p className="text-sm text-zinc-500 text-center py-6 border border-dashed border-zinc-700 rounded">Inventário vazio.</p>}
           </div>
         </div>
 
@@ -1054,9 +1531,9 @@ export default function CharacterSheet() {
           <div className="bg-zinc-800 p-5 rounded-lg border border-zinc-700 shadow-md">
             <h2 className="text-lg font-bold text-emerald-400 mb-3 border-b border-zinc-700 pb-2">Naturezas</h2>
             {character.naturezas && character.naturezas.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto custom-scrollbar">
                 {character.naturezas.map((nat, idx) => (
-                  <div key={idx} className={`px-3 py-1.5 rounded text-sm font-bold border ${nat.cost > 0 ? 'bg-emerald-950 text-emerald-300 border-emerald-800' : 'bg-red-950 text-red-300 border-red-800'}`}>
+                  <div key={idx} className={`px-2 py-1 rounded text-[10px] font-bold border ${nat.cost > 0 ? 'bg-emerald-950 text-emerald-300 border-emerald-800' : 'bg-red-950 text-red-300 border-red-800'}`}>
                     {nat.name} ({nat.cost > 0 ? `-${nat.cost}` : `+${Math.abs(nat.cost)}`} pts)
                   </div>
                 ))}
